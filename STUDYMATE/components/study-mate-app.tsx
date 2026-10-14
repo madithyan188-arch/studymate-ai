@@ -116,6 +116,13 @@ export type Material = {
   updated_at?: string
 }
 
+export function getMaterialKey(m: Material): string {
+  if (m.id) return m.id
+  if (m.created_at) return `${m.name}-${m.created_at}`
+  if (m.size && m.type) return `${m.name}-${m.size}-${m.type}`
+  return m.name
+}
+
 const navItems: { label: Screen; icon: typeof LayoutDashboard }[] = [
   { label: 'Dashboard', icon: LayoutDashboard },
   { label: 'My Materials', icon: FolderOpen },
@@ -129,9 +136,9 @@ const navItems: { label: Screen; icon: typeof LayoutDashboard }[] = [
 ]
 
 const starterMaterials: Material[] = [
-  { name: 'Biology – Cell Structure.pdf', type: 'PDF', size: '2.4 MB', progress: 100, status: 'Ready' },
-  { name: 'Organic Chemistry notes.txt', type: 'TXT', size: '84 KB', progress: 100, status: 'Ready' },
-  { name: 'Introduction to Psychology.pdf', type: 'PDF', size: '5.1 MB', progress: 100, status: 'Ready' },
+  { id: 'starter-biology', name: 'Biology – Cell Structure.pdf', type: 'PDF', size: '2.4 MB', progress: 100, status: 'Ready' },
+  { id: 'starter-chemistry', name: 'Organic Chemistry notes.txt', type: 'TXT', size: '84 KB', progress: 100, status: 'Ready' },
+  { id: 'starter-psychology', name: 'Introduction to Psychology.pdf', type: 'PDF', size: '5.1 MB', progress: 100, status: 'Ready' },
 ]
 
 const quizQuestions = [
@@ -851,7 +858,8 @@ export function StudyMateApp() {
       }
     } else {
       // Local fallback for unauthenticated preview mode
-      const newItems: Material[] = fileArray.map((file) => ({
+      const newItems: Material[] = fileArray.map((file, idx) => ({
+        id: `local-${file.name}-${file.size}-${file.lastModified || Date.now()}-${idx}`,
         name: file.name,
         type: file.name.endsWith('.txt') ? 'TXT' : file.name.endsWith('.pdf') ? 'PDF' : 'DOC',
         size:
@@ -940,7 +948,7 @@ export function StudyMateApp() {
     } else {
       // Local fallback
       setMaterials((current) => {
-        const remaining = current.filter((m) => m.name !== target.name)
+        const remaining = current.filter((m) => (target.id && m.id ? m.id !== target.id : m.name !== target.name))
         if (selectedMaterial === target.name && remaining.length > 0) {
           setSelectedMaterial(remaining[0].name)
         }
@@ -2233,7 +2241,7 @@ function Dashboard({
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             {materials.slice(0, 3).map((m) => (
               <button
-                key={m.name}
+                key={getMaterialKey(m)}
                 onClick={() => {
                   setSelected(m.name)
                   navigate('AI Notes')
@@ -2310,7 +2318,7 @@ function Materials({
   }, [materials, searchQuery])
 
   const handleStartRename = (m: Material) => {
-    setEditingId(m.id || m.name)
+    setEditingId(getMaterialKey(m))
     setEditName(m.name)
   }
 
@@ -2445,10 +2453,11 @@ function Materials({
         ) : (
           <div className="divide-y divide-[#efefec] dark:divide-[#282a3e]">
             {filteredMaterials.map((m) => {
-              const isThisEditing = editingId === (m.id || m.name)
+              const materialKey = getMaterialKey(m)
+              const isThisEditing = editingId === materialKey
               return (
                 <div
-                  key={m.id || m.name}
+                  key={materialKey}
                   className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
                 >
                   <div className="flex items-center gap-3 min-w-[200px] flex-1">
