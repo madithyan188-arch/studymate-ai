@@ -1,0 +1,83 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - banner [ref=f4e3]:
+      - link "StudyMate AI" [ref=f4e4] [cursor=pointer]:
+        - /url: /
+      - button "Back to Workspace" [ref=f4e11]
+    - main [ref=f4e15]:
+      - generic [ref=f4e16]:
+        - generic [ref=f4e17]:
+          - generic [ref=f4e18]:
+            - button "Sign In" [ref=f4e19]
+            - button "Create Account" [ref=f4e20]
+          - generic [ref=f4e21]:
+            - heading "Create your study space" [level=1] [ref=f4e22]
+            - paragraph [ref=f4e23]: Get started with personalized summaries, active quizzes, and smart flashcards.
+          - generic [ref=f4e24]:
+            - generic [ref=f4e25]:
+              - generic [ref=f4e26]: Full name
+              - textbox "Full name" [ref=f4e28]:
+                - /placeholder: e.g. Alex Morgan
+            - generic [ref=f4e32]:
+              - generic [ref=f4e33]: Email address
+              - textbox "Email address" [ref=f4e35]:
+                - /placeholder: name@example.com
+            - generic [ref=f4e39]:
+              - generic [ref=f4e40]: Password
+              - generic [ref=f4e42]:
+                - textbox "Password" [ref=f4e43]:
+                  - /placeholder: At least 8 characters
+                - button "Show password" [ref=f4e47]
+            - generic [ref=f4e51]:
+              - generic [ref=f4e52]: Confirm password
+              - generic [ref=f4e53]:
+                - textbox "Confirm password" [ref=f4e54]:
+                  - /placeholder: Re-enter password
+                - button "Show password" [ref=f4e58]
+            - generic [ref=f4e63] [cursor=pointer]:
+              - checkbox "I agree to the Terms of Service and Privacy Policy." [ref=f4e64]
+              - generic [ref=f4e65]:
+                - text: I agree to the
+                - link "Terms of Service" [ref=f4e66]:
+                  - /url: /terms
+                - text: and
+                - link "Privacy Policy" [ref=f4e67]:
+                  - /url: /privacy
+                - text: .
+            - button "Create StudyMate Account" [ref=f4e68]
+            - paragraph [ref=f4e73]:
+              - text: Already have an account?
+              - button "Sign in" [ref=f4e74]
+          - generic [ref=f4e75]: Frontend UI prototype • Supabase Auth integration ready.
+        - generic [ref=f4e80]:
+          - generic [ref=f4e81]:
+            - generic [ref=f4e82]: StudyMate Learning Loop
+            - heading "From reading to true understanding." [level=2] [ref=f4e85]
+            - paragraph [ref=f4e86]: Turn heavy PDFs and dense textbooks into organized notes, adaptive practice tests, and on-demand tutor explanations.
+            - generic [ref=f4e87]:
+              - generic [ref=f4e93]:
+                - generic [ref=f4e94]: AI Notes with Page Citations
+                - generic [ref=f4e95]: Key concepts extracted directly from your files.
+              - generic [ref=f4e100]:
+                - generic [ref=f4e101]: Interactive Active Recall Quizzes
+                - generic [ref=f4e102]: Instant feedback with detailed rationales.
+              - generic [ref=f4e108]:
+                - generic [ref=f4e109]: Targeted Revision Recommendations
+                - generic [ref=f4e110]: Spot weak topics before your exam day.
+          - generic [ref=f4e111]:
+            - generic [ref=f4e112]: Student Profile Preview
+            - paragraph [ref=f4e113]: “StudyMate transformed how I prepare for exams. Having the AI tutor ground every answer in my own lecture slides makes all the difference.”
+            - generic [ref=f4e114]:
+              - generic [ref=f4e115]: SM
+              - generic [ref=f4e116]:
+                - generic [ref=f4e117]: Alex Morgan
+                - generic [ref=f4e118]: Biology Major • StudyMate Beta
+    - contentinfo [ref=f4e119]:
+      - generic [ref=f4e120]:
+        - generic [ref=f4e121]: StudyMate AI © 2026 • Designed for focused learning
+        - link "Terms of Service Preview" [ref=f4e122] [cursor=pointer]:
+          - /url: /terms
+        - generic [ref=f4e123]: •
+        - link "Privacy Policy Preview" [ref=f4e124] [cursor=pointer]:
+          - /url: /privacy
+  - button "Open Next.js Dev Tools" [ref=f4e130] [cursor=pointer]

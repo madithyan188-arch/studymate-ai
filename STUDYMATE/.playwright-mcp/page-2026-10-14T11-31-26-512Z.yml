@@ -1,0 +1,115 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - button "StudyMate AI From reading to understanding" [ref=e5]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: StudyMate AI
+          - generic [ref=e12]: From reading to understanding
+      - navigation [ref=e13]:
+        - button "Dashboard" [ref=e14]
+        - button "My Materials 3" [ref=e22]:
+          - generic [ref=e23]: My Materials
+          - generic [ref=e27]: "3"
+        - button "AI Notes" [ref=e28]
+        - button "Interactive Quiz 3 Qs" [ref=e34]:
+          - generic [ref=e35]: Interactive Quiz
+          - generic [ref=e40]: 3 Qs
+        - button "AI Tutor" [ref=e41]
+        - button "My Progress" [ref=e47]
+        - button "Scan & Find Answers" [ref=e54]
+        - button "Settings" [ref=e60]
+        - button "Manage Account" [ref=e66]
+      - generic [ref=e72]:
+        - generic [ref=e73]: Learning loop
+        - paragraph [ref=e77]: Understand • Practice • Diagnose weak points • Revise with purpose.
+      - generic [ref=e78]:
+        - button "MC Maya Chen Student account" [ref=e79]:
+          - generic [ref=e80]: MC
+          - generic [ref=e81]:
+            - generic [ref=e82]: Maya Chen
+            - generic [ref=e83]: Student account
+        - button "User actions" [ref=e84]
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - button "Workspace" [ref=e94]
+            - generic [ref=e95]: /
+            - generic [ref=e96]: Dashboard
+          - heading "Dashboard" [level=1] [ref=e97]
+        - generic [ref=e98]:
+          - button "Upload material" [ref=e99]
+          - link "Auth View" [ref=e101] [cursor=pointer]:
+            - /url: /login
+          - button "Open profile menu" [ref=e107]: MC
+      - main [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - paragraph [ref=e111]: Active session • Dashboard
+            - heading "Welcome back, Maya!" [level=2] [ref=e112]
+            - paragraph [ref=e113]: Ready to continue your Cell Structure revision? You're on track for your weekly goal.
+          - button "Upload material" [ref=e114]
+        - generic [ref=e119]:
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - generic [ref=e126]: Continue
+              - generic [ref=e128]: Processing
+            - heading "Cell Structure & Function" [level=3] [ref=e129]
+            - paragraph [ref=e130]: AI Notes • 12 min left
+          - button "Continue" [ref=e131]
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - generic [ref=e140]:
+              - heading "Quick Actions" [level=3] [ref=e141]
+              - paragraph [ref=e142]: Understand • Practice • Diagnose weak points • Revise with purpose.
+            - generic [ref=e146]:
+              - button "Generate Notes Extract bullet points, definitions & formulas" [ref=e147]:
+                - generic [ref=e152]: Generate Notes
+                - generic [ref=e153]: Extract bullet points, definitions & formulas
+              - button "Take a Quiz Generate a quick 3-question diagnostic test" [ref=e154]:
+                - generic [ref=e159]: Take a Quiz
+                - generic [ref=e160]: Generate a quick 3-question diagnostic test
+              - button "Ask AI Tutor Ask quick doubts or get analogies for difficult topics" [ref=e161]:
+                - generic [ref=e166]: Ask AI Tutor
+                - generic [ref=e167]: Ask quick doubts or get analogies for difficult topics
+          - generic [ref=e168]:
+            - generic [ref=e169]:
+              - generic [ref=e170]:
+                - generic [ref=e171]:
+                  - heading "Learning Progress & Analytics" [level=3] [ref=e172]
+                  - paragraph [ref=e173]: Consistent study habits
+                - button "More actions" [ref=e174]
+              - generic [ref=e175]:
+                - generic [ref=e177]:
+                  - text: "72"
+                  - generic [ref=e178]: "%"
+                - generic [ref=e179]:
+                  - generic [ref=e180]: Average Quiz Score
+                  - paragraph [ref=e181]: Strong retention rate • 84%
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - text: "Study Streak:"
+                - strong [ref=e184]: 5 days
+              - generic [ref=e185]:
+                - text: "Materials Studied:"
+                - strong [ref=e186]: 3 topics
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - heading "Recent Study Materials" [level=3] [ref=e190]
+              - paragraph [ref=e191]: Continue where you left off
+            - button "View all in My Materials (3)" [ref=e192]
+          - generic [ref=e193]:
+            - button "Biology – Cell Structure.pdf PDF • 2.4 MB • Ready" [ref=e194]:
+              - generic [ref=e199]:
+                - generic [ref=e200]: Biology – Cell Structure.pdf
+                - generic [ref=e201]: PDF • 2.4 MB • Ready
+            - button "Organic Chemistry notes.txt TXT • 84 KB • Ready" [ref=e204]:
+              - generic [ref=e209]:
+                - generic [ref=e210]: Organic Chemistry notes.txt
+                - generic [ref=e211]: TXT • 84 KB • Ready
+            - button "Introduction to Psychology.pdf PDF • 5.1 MB • Ready" [ref=e212]:
+              - generic [ref=e217]:
+                - generic [ref=e218]: Introduction to Psychology.pdf
+                - generic [ref=e219]: PDF • 5.1 MB • Ready
+  - button "Open Next.js Dev Tools" [ref=e225] [cursor=pointer]

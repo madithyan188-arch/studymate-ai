@@ -1,0 +1,81 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - link "StudyMate AI From reading to understanding" [ref=f2e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f2e9]:
+          - generic [ref=f2e10]: StudyMate AI
+          - generic [ref=f2e11]: From reading to understanding
+      - generic [ref=f2e12]:
+        - combobox "Language" [ref=f2e13]:
+          - option "English (English)" [selected]
+          - option "മലയാളം (Malayalam)"
+          - option "हिन्दी (Hindi)"
+          - option "தமிழ் (Tamil)"
+        - button "Back" [ref=f2e14]
+    - main [ref=f2e18]:
+      - generic [ref=f2e19]:
+        - generic [ref=f2e20]:
+          - generic [ref=f2e21]:
+            - button "Sign In" [ref=f2e22]
+            - button "Create Account" [ref=f2e23]
+          - generic [ref=f2e24]:
+            - heading "Welcome back" [level=1] [ref=f2e25]
+            - paragraph [ref=f2e26]: Log in to continue your personalized study sessions.
+          - generic [ref=f2e27]:
+            - generic [ref=f2e28]:
+              - button "Continue with Google" [ref=f2e29]
+              - generic [ref=f2e36]: OR
+            - generic [ref=f2e40]:
+              - generic [ref=f2e41]: Email address
+              - textbox "Email address" [ref=f2e43]:
+                - /placeholder: maya@example.com
+            - generic [ref=f2e47]:
+              - generic [ref=f2e48]:
+                - generic [ref=f2e49]: Password
+                - button "Forgot password?" [ref=f2e50]
+              - generic [ref=f2e51]:
+                - textbox "Password" [ref=f2e52]:
+                  - /placeholder: ••••••••
+                - button "Show password" [ref=f2e56]
+            - generic [ref=f2e61] [cursor=pointer]:
+              - checkbox "Remember me for 30 days" [ref=f2e62]
+              - generic [ref=f2e63]: Remember me for 30 days
+            - button "Sign In" [ref=f2e64]
+            - paragraph [ref=f2e69]:
+              - text: Don't have an account?
+              - button "Sign up" [ref=f2e70]
+          - generic [ref=f2e71]: Frontend UI prototype • Supabase Auth integration ready.
+        - generic [ref=f2e76]:
+          - generic [ref=f2e77]:
+            - generic [ref=f2e78]: StudyMate Learning Loop
+            - heading "From reading to true understanding." [level=2] [ref=f2e81]
+            - paragraph [ref=f2e82]: Turn heavy PDFs and dense textbooks into organized notes, adaptive practice tests, and on-demand tutor explanations.
+            - generic [ref=f2e83]:
+              - generic [ref=f2e89]:
+                - generic [ref=f2e90]: AI Notes with Page Citations
+                - generic [ref=f2e91]: Key concepts extracted directly from your files.
+              - generic [ref=f2e96]:
+                - generic [ref=f2e97]: Interactive Active Recall Quizzes
+                - generic [ref=f2e98]: Instant feedback with detailed rationales.
+              - generic [ref=f2e104]:
+                - generic [ref=f2e105]: Targeted Revision Recommendations
+                - generic [ref=f2e106]: Spot weak topics before your exam day.
+          - generic [ref=f2e107]:
+            - generic [ref=f2e108]: Student Profile Preview
+            - paragraph [ref=f2e109]: “StudyMate transformed how I prepare for exams. Having the AI tutor ground every answer in my own lecture slides makes all the difference.”
+            - generic [ref=f2e110]:
+              - generic [ref=f2e111]: SM
+              - generic [ref=f2e112]:
+                - generic [ref=f2e113]: Alex Morgan
+                - generic [ref=f2e114]: Biology Major • StudyMate Beta
+    - contentinfo [ref=f2e115]:
+      - generic [ref=f2e116]:
+        - generic [ref=f2e117]: StudyMate AI © 2026 • Designed for focused learning
+        - generic [ref=f2e118]: •
+        - link "Terms of Service Preview" [ref=f2e119] [cursor=pointer]:
+          - /url: /terms
+        - generic [ref=f2e120]: •
+        - link "Privacy Policy Preview" [ref=f2e121] [cursor=pointer]:
+          - /url: /privacy
+  - button "Open Next.js Dev Tools" [ref=f2e127] [cursor=pointer]

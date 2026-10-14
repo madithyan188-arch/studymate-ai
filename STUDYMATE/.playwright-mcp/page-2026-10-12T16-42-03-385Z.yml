@@ -1,0 +1,42 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - link "StudyMate AI From reading to understanding" [ref=f2e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f2e9]:
+          - generic [ref=f2e10]: StudyMate AI
+          - generic [ref=f2e11]: From reading to understanding
+      - generic [ref=f2e12]:
+        - link "Back to Sign Up" [ref=f2e13] [cursor=pointer]:
+          - /url: /signup
+        - link "Workspace" [ref=f2e16] [cursor=pointer]:
+          - /url: /
+    - main [ref=f2e17]:
+      - generic [ref=f2e18]:
+        - generic [ref=f2e19]: Policy Preview • Effective 2026
+        - heading "Terms of Service" [level=1] [ref=f2e23]
+        - paragraph [ref=f2e24]: Welcome to StudyMate AI. These Terms govern your access to and use of our intelligent study companion platform.
+        - generic [ref=f2e25]:
+          - strong [ref=f2e26]: "Note for Previewers:"
+          - text: This is a frontend placeholder representing the planned terms for the StudyMate AI educational service.
+        - generic [ref=f2e27]:
+          - generic [ref=f2e28]:
+            - heading "1. Acceptance of Terms" [level=2] [ref=f2e29]
+            - paragraph [ref=f2e32]: By registering for an account or using StudyMate AI, you agree to comply with and be bound by these Terms. If you are using StudyMate AI on behalf of an educational institution, you represent that you have authority to bind that entity.
+          - generic [ref=f2e33]:
+            - heading "2. Educational Purpose & Permitted Use" [level=2] [ref=f2e34]
+            - paragraph [ref=f2e38]: StudyMate AI is designed as a learning aid to help students comprehend textbooks, synthesize lecture slides, generate flashcards, and test recall. It is not intended to replace formal instruction or violate academic integrity policies of your institution.
+          - generic [ref=f2e39]:
+            - heading "3. User Content & Study Materials" [level=2] [ref=f2e40]
+            - paragraph [ref=f2e43]: You retain ownership of all lecture notes, PDFs, syllabus files, and documents you upload to StudyMate AI. You grant StudyMate AI a limited license solely to process and analyze your materials to generate study guides, summaries, and quiz questions for your account.
+          - generic [ref=f2e44]:
+            - heading "4. Account Security & Responsibilities" [level=2] [ref=f2e45]
+            - paragraph [ref=f2e49]: You are responsible for maintaining the confidentiality of your login credentials and for all activities occurring under your account. Notify us immediately if you suspect unauthorized access.
+        - generic [ref=f2e50]:
+          - link "Return to Create Account" [ref=f2e51] [cursor=pointer]:
+            - /url: /signup
+          - link "Read Privacy Policy →" [ref=f2e52] [cursor=pointer]:
+            - /url: /privacy
+    - contentinfo [ref=f2e53]: StudyMate AI © 2026 • Designed for focused learning.
+  - button "Open Next.js Dev Tools" [ref=f2e59] [cursor=pointer]
+  - alert [ref=f2e63]

@@ -1,0 +1,91 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - status [ref=e265]:
+      - generic [ref=e269]: Language changed to മലയാളം (Malayalam).
+      - button "Dismiss toast" [ref=e270]
+    - complementary [ref=e3]:
+      - button "StudyMate AI വായനയിൽ നിന്ന് ഗ്രഹണത്തിലേക്ക്" [ref=e274]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: StudyMate AI
+          - generic [ref=e12]: വായനയിൽ നിന്ന് ഗ്രഹണത്തിലേക്ക്
+      - navigation [ref=e13]:
+        - button "ഡാഷ്‌ബോർഡ്" [ref=e275]
+        - button "എന്റെ പഠന സാമഗ്രികൾ 3" [ref=e276]:
+          - generic [ref=e23]: എന്റെ പഠന സാമഗ്രികൾ
+          - generic [ref=e27]: "3"
+        - button "AI കുറിപ്പുകൾ" [ref=e277]
+        - button "ഇന്ററാക്ടീവ് ക്വിസ് 3 Qs" [ref=e278]:
+          - generic [ref=e35]: ഇന്ററാക്ടീവ് ക്വിസ്
+          - generic [ref=e40]: 3 Qs
+        - button "AI ട്യൂട്ടർ" [ref=e279]
+        - button "എന്റെ പുരോഗതി" [ref=e280]
+        - button "സ്കാൻ ചെയ്ത് ഉത്തരം കണ്ടെത്തുക" [ref=e281]
+        - button "ക്രമീകരണങ്ങൾ" [active] [ref=e282]
+        - button "അക്കൗണ്ട് കൈകാര്യം ചെയ്യുക" [ref=e283]
+      - generic [ref=e72]:
+        - generic [ref=e73]: പഠന ചക്രം
+        - paragraph [ref=e77]: മനസ്സിലാക്കുക • പരിശീലിക്കുക • ദൗർബല്യങ്ങൾ കണ്ടെത്തുക • ലക്ഷ്യബോധത്തോടെ പഠിക്കുക.
+      - generic [ref=e78]:
+        - button "MC Maya Chen വിദ്യാർത്ഥി അക്കൗണ്ട്" [ref=e284]:
+          - generic [ref=e80]: MC
+          - generic [ref=e81]:
+            - generic [ref=e82]: Maya Chen
+            - generic [ref=e83]: വിദ്യാർത്ഥി അക്കൗണ്ട്
+        - button "User actions" [ref=e84]
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - button "വർക്ക്സ്പേസ്" [ref=e285]
+            - generic [ref=e95]: /
+            - generic [ref=e96]: ക്രമീകരണങ്ങൾ
+          - heading "ക്രമീകരണങ്ങൾ" [level=1] [ref=e286]
+        - generic [ref=e98]:
+          - button "സാമഗ്രി അപ്‌ലോഡ് ചെയ്യുക" [ref=e287]
+          - link "ലോഗിൻ പ്രിവ്യൂ" [ref=e288] [cursor=pointer]:
+            - /url: /login
+          - button "Open profile menu" [ref=e107]: MC
+      - main [ref=e108]:
+        - generic [ref=e230]:
+          - generic [ref=e231]: മുൻഗണനകൾ
+          - heading "ക്രമീകരണങ്ങൾ" [level=2] [ref=e289]
+          - paragraph [ref=e233]: പഠന വർക്ക്സ്പേസ്, വിശദീകരണ ശൈലി, അറിയിപ്പുകൾ എന്നിവ ക്രമീകരിക്കുക.
+        - generic [ref=e234]:
+          - generic [ref=e235]:
+            - button "പൊതുവായവ" [ref=e290]
+            - button "പഠന മുൻഗണനകൾ" [ref=e291]
+            - button "അറിയിപ്പുകൾ" [ref=e292]
+            - button "സ്വകാര്യതയും സുരക്ഷയും" [ref=e293]
+            - button "അക്കൗണ്ട് കൈകാര്യം ചെയ്യുക" [ref=e294]
+          - generic [ref=e241]:
+            - generic [ref=e242]:
+              - heading "പൊതുവായ മുൻഗണനകൾ" [level=3] [ref=e295]
+              - generic [ref=e244]:
+                - generic [ref=e245]:
+                  - generic [ref=e246]:
+                    - generic [ref=e247]: ദൃശ്യരൂപം (തീം)
+                    - generic [ref=e248]: നിങ്ങളുടെ പഠന സ്ഥലത്തിന് അനുയോജ്യമായ തീം തിരഞ്ഞെടുക്കുക.
+                  - combobox [ref=e249]:
+                    - option "ലൈറ്റ് (Light)" [selected]
+                    - option "സിസ്റ്റം ഡിഫോൾട്ട് (System)"
+                    - option "ഡാർക്ക് (Dark Preview)"
+                - generic [ref=e250]:
+                  - generic [ref=e251]:
+                    - generic [ref=e252]: ഭാഷ (Language)
+                    - generic [ref=e253]: നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന ഇന്റർഫേസ് ഭാഷ.
+                  - combobox [ref=e254]:
+                    - option "English (English)"
+                    - option "മലയാളം (Malayalam)" [selected]
+                    - option "हिन्दी (Hindi)"
+                    - option "தமிழ் (Tamil)"
+                - generic [ref=e255] [cursor=pointer]:
+                  - generic [ref=e256]: AI കുറിപ്പുകളിൽ റഫറൻസ് പേജുകൾ കാണിക്കുക
+                  - checkbox "AI കുറിപ്പുകളിൽ റഫറൻസ് പേജുകൾ കാണിക്കുക" [checked] [ref=e296]
+                - generic [ref=e258] [cursor=pointer]:
+                  - generic [ref=e259]: ടാബുകൾ മാറുമ്പോഴും ക്വിസ് നിലനിർത്തുക
+                  - checkbox "ടാബുകൾ മാറുമ്പോഴും ക്വിസ് നിലനിർത്തുക" [checked] [ref=e297]
+            - generic [ref=e261]:
+              - button "മുൻഗണനകൾ സംരക്ഷിക്കുക" [ref=e298]
+              - generic [ref=e263]: തീം മുൻഗണനയോടൊപ്പം ക്രമീകരണങ്ങൾ സൂക്ഷിച്ചു.
+  - button "Open Next.js Dev Tools" [ref=e225] [cursor=pointer]
+  - alert [ref=e264]

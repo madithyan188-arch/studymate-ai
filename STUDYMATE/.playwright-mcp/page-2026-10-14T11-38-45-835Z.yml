@@ -1,0 +1,74 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - button "StudyMate AI படிப்பதில் இருந்து புரிந்து கொள்வது வரை" [ref=e342]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: StudyMate AI
+          - generic [ref=e12]: படிப்பதில் இருந்து புரிந்து கொள்வது வரை
+      - navigation [ref=e13]:
+        - button "டாஷ்போர்டு" [ref=e343]
+        - button "என் பாடப் பொருட்கள் 3" [ref=e344]:
+          - generic [ref=e23]: என் பாடப் பொருட்கள்
+          - generic [ref=e27]: "3"
+        - button "AI குறிப்புகள்" [ref=e345]
+        - button "ஊடாடும் வினாடி வினா 3 Qs" [active] [ref=e346]:
+          - generic [ref=e35]: ஊடாடும் வினாடி வினா
+          - generic [ref=e40]: 3 Qs
+        - button "AI ஆசிரியர்" [ref=e347]
+        - button "என் முன்னேற்றம்" [ref=e348]
+        - button "ஸ்கேன் செய்து விடை காண்க" [ref=e349]
+        - button "அமைப்புகள்" [ref=e350]
+        - button "கணக்கு மேலாண்மை" [ref=e351]
+      - generic [ref=e72]:
+        - generic [ref=e73]: கற்றல் சுழற்சி
+        - paragraph [ref=e77]: புரிந்து கொள்க • பயிற்சி செய்க • பலவீனங்களை கண்டறிக • நோக்கத்துடன் திருப்புதல் செய்க.
+      - generic [ref=e78]:
+        - button "MC Maya Chen மாணவர் கணக்கு" [ref=e352]:
+          - generic [ref=e80]: MC
+          - generic [ref=e81]:
+            - generic [ref=e82]: Maya Chen
+            - generic [ref=e83]: மாணவர் கணக்கு
+        - button "User actions" [ref=e84]
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - button "பணிவெளி (Workspace)" [ref=e353]
+            - generic [ref=e95]: /
+            - generic [ref=e96]: ஊடாடும் வினாடி வினா
+          - heading "ஊடாடும் வினாடி வினா" [level=1] [ref=e479]
+        - generic [ref=e98]:
+          - button "பாடக்குறிப்பை பதிவேற்றுக" [ref=e355]
+          - link "உள்நுழைவு முன்னோட்டம்" [ref=e356] [cursor=pointer]:
+            - /url: /login
+          - button "Open profile menu" [ref=e107]: MC
+      - main [ref=e108]:
+        - generic [ref=e480]:
+          - generic [ref=e481]:
+            - generic [ref=e482]: ஊடாடும் வினாடி வினா
+            - heading "ஊடாடும் வினாடி வினா பரிசோதனை" [level=2] [ref=e483]
+            - paragraph [ref=e484]: உடனடி விளக்கங்களுடன் உங்கள் பாடப் புரிதலை சோதித்து அறிவை வளர்த்துக் கொள்ளுங்கள்.
+          - generic [ref=e485]: கேள்வி 1 / 3
+        - generic [ref=e488]:
+          - generic [ref=e489]:
+            - generic [ref=e490]: கேள்வி 1 / 3
+            - generic [ref=e491]: செல் உயிரியல்
+          - heading "ஒரு செல்லுக்குள் செல்வதையும் வெளியேறுவதையும் கட்டுப்படுத்தும் அமைப்பு எது?" [level=3] [ref=e492]
+          - generic [ref=e493]:
+            - button "A செல் சுவர் (Cell wall)" [ref=e494]:
+              - generic [ref=e495]: A
+              - generic [ref=e496]: செல் சுவர் (Cell wall)
+            - button "B செல் சவ்வு (Cell membrane)" [ref=e497]:
+              - generic [ref=e498]: B
+              - generic [ref=e499]: செல் சவ்வு (Cell membrane)
+            - button "C சைட்டோபிளாசம் (Cytoplasm)" [ref=e500]:
+              - generic [ref=e501]: C
+              - generic [ref=e502]: சைட்டோபிளாசம் (Cytoplasm)
+            - button "D நியூக்ளியஸ் (Nucleus)" [ref=e503]:
+              - generic [ref=e504]: D
+              - generic [ref=e505]: நியூக்ளியஸ் (Nucleus)
+          - generic [ref=e506]:
+            - button "முந்தைய கேள்வி" [disabled] [ref=e507]
+            - button "அடுத்த கேள்வி" [disabled] [ref=e510]
+  - button "Open Next.js Dev Tools" [ref=e225] [cursor=pointer]
+  - alert [ref=e264]

@@ -1,0 +1,116 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - button "StudyMate AI படிப்பதில் இருந்து புரிந்து கொள்வது வரை" [ref=e342]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: StudyMate AI
+          - generic [ref=e12]: படிப்பதில் இருந்து புரிந்து கொள்வது வரை
+      - navigation [ref=e13]:
+        - button "டாஷ்போர்டு" [active] [ref=e343]
+        - button "என் பாடப் பொருட்கள் 3" [ref=e344]:
+          - generic [ref=e23]: என் பாடப் பொருட்கள்
+          - generic [ref=e27]: "3"
+        - button "AI குறிப்புகள்" [ref=e345]
+        - button "ஊடாடும் வினாடி வினா 3 Qs" [ref=e346]:
+          - generic [ref=e35]: ஊடாடும் வினாடி வினா
+          - generic [ref=e40]: 3 Qs
+        - button "AI ஆசிரியர்" [ref=e347]
+        - button "என் முன்னேற்றம்" [ref=e348]
+        - button "ஸ்கேன் செய்து விடை காண்க" [ref=e349]
+        - button "அமைப்புகள்" [ref=e350]
+        - button "கணக்கு மேலாண்மை" [ref=e351]
+      - generic [ref=e72]:
+        - generic [ref=e73]: கற்றல் சுழற்சி
+        - paragraph [ref=e77]: புரிந்து கொள்க • பயிற்சி செய்க • பலவீனங்களை கண்டறிக • நோக்கத்துடன் திருப்புதல் செய்க.
+      - generic [ref=e78]:
+        - button "MC Maya Chen மாணவர் கணக்கு" [ref=e352]:
+          - generic [ref=e80]: MC
+          - generic [ref=e81]:
+            - generic [ref=e82]: Maya Chen
+            - generic [ref=e83]: மாணவர் கணக்கு
+        - button "User actions" [ref=e84]
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - button "பணிவெளி (Workspace)" [ref=e353]
+            - generic [ref=e95]: /
+            - generic [ref=e96]: டாஷ்போர்டு
+          - heading "டாஷ்போர்டு" [level=1] [ref=e367]
+        - generic [ref=e98]:
+          - button "பாடக்குறிப்பை பதிவேற்றுக" [ref=e355]
+          - link "உள்நுழைவு முன்னோட்டம்" [ref=e356] [cursor=pointer]:
+            - /url: /login
+          - button "Open profile menu" [ref=e107]: MC
+      - main [ref=e108]:
+        - generic [ref=e368]:
+          - generic [ref=e369]:
+            - paragraph [ref=e370]: செயலில் உள்ள அமர்வு • டாஷ்போர்டு
+            - heading "மீண்டும் வருக, மாயா!" [level=2] [ref=e371]
+            - paragraph [ref=e372]: செல் அமைப்பை மறுபார்வை செய்ய தயாரா? உங்களின் வாராந்திர இலக்கை நோக்கி நீங்கள் சீராக முன்னேறுகிறீர்கள்.
+          - button "பாடக்குறிப்பை பதிவேற்றுக" [ref=e373]
+        - generic [ref=e378]:
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - generic [ref=e385]: தொடர்க
+              - generic [ref=e387]: செயலாக்கத்தில் உள்ளது
+            - heading "Cell Structure & Function" [level=3] [ref=e388]
+            - paragraph [ref=e389]: AI குறிப்புகள் • 12 min left
+          - button "தொடர்க" [ref=e390]
+        - generic [ref=e396]:
+          - generic [ref=e397]:
+            - generic [ref=e399]:
+              - heading "விரைவு நடவடிக்கைகள்" [level=3] [ref=e400]
+              - paragraph [ref=e401]: புரிந்து கொள்க • பயிற்சி செய்க • பலவீனங்களை கண்டறிக • நோக்கத்துடன் திருப்புதல் செய்க.
+            - generic [ref=e405]:
+              - button "குறிப்புகள் தயாரிக்க முக்கிய புள்ளிகள் மற்றும் சூத்திரங்களை பெற" [ref=e406]:
+                - generic [ref=e411]: குறிப்புகள் தயாரிக்க
+                - generic [ref=e412]: முக்கிய புள்ளிகள் மற்றும் சூத்திரங்களை பெற
+              - button "வினாடி வினா தொடங்க 3 கேள்விகள் கொண்ட விரைவு பரிசோதனை செய்ய" [ref=e413]:
+                - generic [ref=e418]: வினாடி வினா தொடங்க
+                - generic [ref=e419]: 3 கேள்விகள் கொண்ட விரைவு பரிசோதனை செய்ய
+              - button "AI ஆசிரியரிடம் கேட்க சந்தேகங்களை தீர்க்கவும் எளிய உதாரணங்களை பெறவும்" [ref=e420]:
+                - generic [ref=e425]: AI ஆசிரியரிடம் கேட்க
+                - generic [ref=e426]: சந்தேகங்களை தீர்க்கவும் எளிய உதாரணங்களை பெறவும்
+          - generic [ref=e427]:
+            - generic [ref=e428]:
+              - generic [ref=e429]:
+                - generic [ref=e430]:
+                  - heading "கற்றல் முன்னேற்றமும் பகுப்பாய்வும்" [level=3] [ref=e431]
+                  - paragraph [ref=e432]: நிலையான படிக்கும் பழக்கம்
+                - button "கூடுதல் விருப்பங்கள்" [ref=e433]
+              - generic [ref=e434]:
+                - generic [ref=e436]:
+                  - text: "72"
+                  - generic [ref=e437]: "%"
+                - generic [ref=e438]:
+                  - generic [ref=e439]: சராசரி வினாடி வினா மதிப்பெண்
+                  - paragraph [ref=e440]: வலுவான நினைவாற்றல் வீதம் • 84%
+            - generic [ref=e441]:
+              - generic [ref=e442]:
+                - text: "தொடர் கற்றல்:"
+                - strong [ref=e443]: 5 நாட்கள்
+              - generic [ref=e444]:
+                - text: "படித்த பாடங்கள்:"
+                - strong [ref=e445]: 3 தலைப்புகள்
+        - generic [ref=e446]:
+          - generic [ref=e447]:
+            - generic [ref=e448]:
+              - heading "சமீபத்திய பாடப் பொருட்கள்" [level=3] [ref=e449]
+              - paragraph [ref=e450]: நீங்கள் விட்ட இடத்திலிருந்து தொடரவும்
+            - button "அனைத்து பாடப் பொருட்களையும் காண்க (3)" [ref=e451]
+          - generic [ref=e452]:
+            - button "Biology – Cell Structure.pdf PDF • 2.4 MB • Ready" [ref=e453]:
+              - generic [ref=e458]:
+                - generic [ref=e459]: Biology – Cell Structure.pdf
+                - generic [ref=e460]: PDF • 2.4 MB • Ready
+            - button "Organic Chemistry notes.txt TXT • 84 KB • Ready" [ref=e463]:
+              - generic [ref=e468]:
+                - generic [ref=e469]: Organic Chemistry notes.txt
+                - generic [ref=e470]: TXT • 84 KB • Ready
+            - button "Introduction to Psychology.pdf PDF • 5.1 MB • Ready" [ref=e471]:
+              - generic [ref=e476]:
+                - generic [ref=e477]: Introduction to Psychology.pdf
+                - generic [ref=e478]: PDF • 5.1 MB • Ready
+  - button "Open Next.js Dev Tools" [ref=e225] [cursor=pointer]
+  - alert [ref=e264]

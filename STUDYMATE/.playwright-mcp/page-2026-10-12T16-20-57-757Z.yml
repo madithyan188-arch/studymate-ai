@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: StudyMate AI
+        - generic [ref=e11]: From reading to understanding
+      - link "Back to Workspace" [ref=e12] [cursor=pointer]:
+        - /url: /
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - button "Sign In" [ref=e19]
+            - button "Create Account" [ref=e20]
+          - generic [ref=e21]:
+            - heading "Create your study space" [level=1] [ref=e22]
+            - paragraph [ref=e23]: Get started with personalized summaries, active quizzes, and smart flashcards.
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - generic [ref=e26]: Full name
+              - textbox "e.g. Maya Chen" [ref=e28]
+            - generic [ref=e32]:
+              - generic [ref=e33]: Email address
+              - textbox "maya@example.com" [ref=e35]
+            - generic [ref=e39]:
+              - generic [ref=e40]: Password
+              - generic [ref=e42]:
+                - textbox "Enter password" [ref=e43]
+                - button "Show password" [ref=e47]
+            - generic [ref=e51]:
+              - generic [ref=e52]: Confirm password
+              - generic [ref=e53]:
+                - textbox "Re-enter password" [ref=e54]
+                - button "Show password" [ref=e58]
+            - generic [ref=e63] [cursor=pointer]:
+              - checkbox "I agree to the Terms of Service and Privacy Policy." [ref=e64]
+              - generic [ref=e65]: I agree to the Terms of Service and Privacy Policy.
+            - button "Create StudyMate Account" [ref=e66]
+            - paragraph [ref=e70]:
+              - text: Already have an account?
+              - button "Sign in" [ref=e71]
+          - generic [ref=e72]: Frontend UI prototype. Backend authentication ready for Supabase.
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]: StudyMate Learning Loop
+            - heading "From reading to true understanding." [level=2] [ref=e82]
+            - paragraph [ref=e83]: Turn heavy PDFs and dense textbooks into organized notes, adaptive practice tests, and on-demand tutor explanations.
+            - generic [ref=e84]:
+              - generic [ref=e90]:
+                - generic [ref=e91]: AI Notes with Page Citations
+                - generic [ref=e92]: Key concepts extracted directly from your files.
+              - generic [ref=e97]:
+                - generic [ref=e98]: Interactive Active Recall Quizzes
+                - generic [ref=e99]: Instant feedback with detailed rationales.
+              - generic [ref=e105]:
+                - generic [ref=e106]: Targeted Revision Recommendations
+                - generic [ref=e107]: Spot weak topics before your exam day.
+          - generic [ref=e108]:
+            - generic [ref=e109]: Student Profile Preview
+            - paragraph [ref=e110]: “StudyMate transformed how I prepare for my biology exams. Having the AI tutor ground every answer in my own lecture slides makes all the difference.”
+            - generic [ref=e111]:
+              - generic [ref=e112]: MC
+              - generic [ref=e113]:
+                - generic [ref=e114]: Maya Chen
+                - generic [ref=e115]: Pre-Med Student • StudyMate Beta
+    - contentinfo [ref=e116]: StudyMate AI © 2026 • Designed for focused learning.
+  - button "Open Next.js Dev Tools" [ref=e122] [cursor=pointer]

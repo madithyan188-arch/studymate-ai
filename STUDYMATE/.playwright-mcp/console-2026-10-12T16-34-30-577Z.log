@@ -1,0 +1,4 @@
+[     247ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/0r5__next_dist_0ddz0_y_ga3mh._.js:719
+[     268ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/0r5__next_dist_0ddz0_y_ga3mh._.js:719
+[  395372ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/forgot-password:0
+[  395485ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/reset-password:0
