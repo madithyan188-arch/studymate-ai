@@ -1,10 +1,11 @@
 /**
  * StudyMate AI - PDF Scanning and Important Topics Extraction Verification Suite
  * Tests text-based PDFs, multi-page PDFs, corrupt PDFs, empty PDFs,
- * scanned PDFs, unauthenticated API rejection, and topics structure.
+ * scanned PDFs, structural topic extraction, unauthenticated API rejection, and topics structure.
  */
 
 import { extractText } from 'unpdf'
+import { extractTopicsFromDocumentStructure } from '../lib/document-topics.ts'
 import assert from 'assert'
 
 let passed = 0
@@ -102,7 +103,28 @@ startxref
   assert(res.text[1].includes('Page 2: Mitochondrial ATP synthase'), 'Page 2 should match')
 })
 
-// 3. Corrupt/Invalid PDF handling
+// 3. Structural Topic Extraction from Document Text
+test('Structural topic extractor identifies headings, explanations, and page numbers', () => {
+  const samplePages = [
+    {
+      page: 1,
+      text: `Chapter 1: Phospholipid Bilayer Architecture\nThe cell membrane is composed of an amphipathic lipid bilayer that establishes a stable hydrophobic interior core.\n\nMembrane Transport Mechanisms:\nPassive diffusion facilitates nonpolar gas exchange, while integral channel proteins regulate polar ion movement.`,
+    },
+    {
+      page: 2,
+      text: `Section 2: ATP Synthase Function\nMitochondria synthesize ATP through rotary catalytic phosphorylation driven by chemiosmotic proton gradients.\n\nCellular Homeostasis:\nLiving organisms maintain internal chemical balance through negative feedback loops and active transport across organelles.`,
+    },
+  ]
+
+  const topics = extractTopicsFromDocumentStructure(samplePages)
+  assert(Array.isArray(topics), 'topics should be an array')
+  assert(topics.length >= 2, `Expected at least 2 topics, got ${topics.length}`)
+  assert(topics.some((t) => t.topic.includes('Phospholipid Bilayer') && t.pageNumber === 1), 'Topic 1 should have page 1')
+  assert(topics.some((t) => t.topic.includes('ATP Synthase') && t.pageNumber === 2), 'Topic 2 should have page 2')
+  assert(topics.every((t) => t.explanation && t.explanation.length > 15), 'Every topic must have an explanation')
+})
+
+// 4. Corrupt/Invalid PDF handling
 await testAsync('Corrupt or malformed PDF throws standard catchable exception', async () => {
   const corruptedBuffer = new Uint8Array(Buffer.from('Not a PDF file header'))
   let threw = false
@@ -115,10 +137,8 @@ await testAsync('Corrupt or malformed PDF throws standard catchable exception', 
   assert(threw, 'Should throw an error for corrupt PDF')
 })
 
-// 4. Scanned PDF (empty digital text) detection
+// 5. Scanned PDF (empty digital text) detection
 await testAsync('Scanned PDF with 0 selectable text characters correctly identifies as non-digital', async () => {
-  // Empty stream representing an image-only page without text operations
-  const stream = ''
   const pdfStr = `%PDF-1.4
 1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
 2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
@@ -143,7 +163,7 @@ startxref
   assert(combined.length < 15, 'Scanned PDF text length should be < 15 chars')
 })
 
-// 5. Structured Topics Data Contract Validation
+// 6. Structured Topics Data Contract Validation
 test('Structured Topics Data Contract adheres to ExtractedTopic interface', () => {
   const sampleTopic = {
     topic: 'Phospholipid Bilayer Permeability',
@@ -154,24 +174,6 @@ test('Structured Topics Data Contract adheres to ExtractedTopic interface', () =
   assert(typeof sampleTopic.topic === 'string' && sampleTopic.topic.length > 0, 'topic is non-empty string')
   assert(typeof sampleTopic.explanation === 'string' && sampleTopic.explanation.length > 0, 'explanation is non-empty string')
   assert(typeof sampleTopic.pageNumber === 'number' && sampleTopic.pageNumber > 0, 'pageNumber is positive integer')
-})
-
-// 6. Safe Missing-Key Diagnostics Validation
-test('Missing AI key produces diagnostic message without breaking or fabricating fake topics', () => {
-  const mockResponse = {
-    extractedText: '--- Page 1 ---\nCell biology concepts.',
-    text: '--- Page 1 ---\nCell biology concepts.',
-    totalPages: 1,
-    topics: [],
-    provider: 'pdf-parser',
-    aiAnalyzed: false,
-    diagnostics: 'Text extracted from 1 page(s). Configure GEMINI_API_KEY in .env.local to enable automated key topics extraction and AI summaries.',
-  }
-
-  assert.strictEqual(mockResponse.topics.length, 0, 'No fake topics fabricated when key is missing')
-  assert(mockResponse.diagnostics.includes('Configure GEMINI_API_KEY'), 'Diagnostic instructions provided')
-  assert.strictEqual(mockResponse.aiAnalyzed, false, 'aiAnalyzed flag accurately reflects unconfigured AI')
-  assert(mockResponse.text.length > 0, 'User still receives extracted text')
 })
 
 // 7. Test unauthenticated API endpoint rejection
@@ -187,7 +189,6 @@ await testAsync('Live endpoint /api/scan/ocr rejects unauthenticated requests wi
     })
     assert.strictEqual(res.status, 401, 'Endpoint rejected unauthenticated request with 401')
   } catch (err) {
-    // If dev server is not on localhost:3000, skip network test
     console.log('    (Dev server check skipped: ' + err.message + ')')
   }
 })

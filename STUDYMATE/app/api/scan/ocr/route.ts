@@ -8,11 +8,10 @@ import {
 } from '@/lib/api-security'
 import { extractText } from 'unpdf'
 
-export interface ExtractedTopic {
-  topic: string
-  explanation: string
-  pageNumber?: number
-}
+import { extractTopicsFromDocumentStructure, type ExtractedTopic } from '@/lib/document-topics'
+
+export type { ExtractedTopic }
+export { extractTopicsFromDocumentStructure }
 
 interface OCRRequestBody {
   imageBase64: string
@@ -38,7 +37,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 }
 
 /**
- * Uses Gemini or OpenAI to extract 3 to 6 structured study topics with pedagogical explanations
+ * Uses Gemini or OpenAI to extract structured study topics with pedagogical explanations
  * and page numbers from document text.
  */
 async function extractTopicsWithAI(
@@ -48,7 +47,6 @@ async function extractTopicsWithAI(
   openAiKey?: string
 ): Promise<{ topics: ExtractedTopic[]; provider?: string }> {
   const targetLanguage = LANGUAGE_NAMES[language] || 'English'
-  // Truncate to first 10,000 characters to stay within token limits while preserving core content
   const truncatedText = text.slice(0, 10000)
 
   const systemPrompt = `You are StudyMate AI, an expert academic document analyzer.
@@ -60,8 +58,9 @@ For each topic, provide:
 
 CRITICAL INSTRUCTIONS:
 - Language: You MUST write the topic titles and explanations in ${targetLanguage}.
-- Output Format: Return strictly a valid JSON array of objects with keys "topic", "explanation", and "pageNumber".
-- Do not output markdown code fences or any conversational filler. Return only the JSON array.`
+- Output Format: Return strictly a valid JSON object with a single key "topics" containing the array of topic objects.
+- Example: { "topics": [{ "topic": "Photosynthesis", "explanation": "Conversion of light energy into chemical energy.", "pageNumber": 1 }] }
+- Do not output markdown code fences or any conversational filler. Return only the valid JSON object.`
 
   const userPrompt = `Document Excerpt:\n${truncatedText}`
 
@@ -82,7 +81,7 @@ CRITICAL INSTRUCTIONS:
             generationConfig: {
               temperature: 0.2,
               responseMimeType: 'application/json',
-              maxOutputTokens: 1200,
+              maxOutputTokens: 1400,
             },
           }),
         },
@@ -94,17 +93,20 @@ CRITICAL INSTRUCTIONS:
         const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
         if (rawJson) {
           const parsed = JSON.parse(rawJson)
-          if (Array.isArray(parsed)) {
-            const validTopics = parsed
-              .filter((item: any) => item && typeof item.topic === 'string' && item.topic.trim())
-              .map((item: any) => ({
-                topic: String(item.topic).trim(),
-                explanation: String(item.explanation || '').trim(),
-                pageNumber: typeof item.pageNumber === 'number' ? item.pageNumber : undefined,
-              }))
-            if (validTopics.length > 0) {
-              return { topics: validTopics, provider: 'gemini' }
-            }
+          const list = Array.isArray(parsed)
+            ? parsed
+            : Array.isArray(parsed.topics)
+            ? parsed.topics
+            : []
+          const validTopics = list
+            .filter((item: any) => item && typeof item.topic === 'string' && item.topic.trim())
+            .map((item: any) => ({
+              topic: String(item.topic).trim(),
+              explanation: String(item.explanation || '').trim(),
+              pageNumber: typeof item.pageNumber === 'number' ? item.pageNumber : undefined,
+            }))
+          if (validTopics.length > 0) {
+            return { topics: validTopics, provider: 'gemini' }
           }
         }
       }
@@ -131,7 +133,7 @@ CRITICAL INSTRUCTIONS:
               { role: 'user', content: userPrompt },
             ],
             temperature: 0.2,
-            max_tokens: 1200,
+            max_tokens: 1400,
             response_format: { type: 'json_object' },
           }),
         },
@@ -143,18 +145,20 @@ CRITICAL INSTRUCTIONS:
         const content = data?.choices?.[0]?.message?.content?.trim()
         if (content) {
           const parsed = JSON.parse(content)
-          const list = Array.isArray(parsed) ? parsed : parsed.topics || parsed.items || []
-          if (Array.isArray(list)) {
-            const validTopics = list
-              .filter((item: any) => item && typeof item.topic === 'string' && item.topic.trim())
-              .map((item: any) => ({
-                topic: String(item.topic).trim(),
-                explanation: String(item.explanation || '').trim(),
-                pageNumber: typeof item.pageNumber === 'number' ? item.pageNumber : undefined,
-              }))
-            if (validTopics.length > 0) {
-              return { topics: validTopics, provider: 'openai' }
-            }
+          const list = Array.isArray(parsed)
+            ? parsed
+            : Array.isArray(parsed.topics)
+            ? parsed.topics
+            : []
+          const validTopics = list
+            .filter((item: any) => item && typeof item.topic === 'string' && item.topic.trim())
+            .map((item: any) => ({
+              topic: String(item.topic).trim(),
+              explanation: String(item.explanation || '').trim(),
+              pageNumber: typeof item.pageNumber === 'number' ? item.pageNumber : undefined,
+            }))
+          if (validTopics.length > 0) {
+            return { topics: validTopics, provider: 'openai' }
           }
         }
       }
@@ -327,34 +331,38 @@ export async function POST(req: NextRequest) {
 
       // 1. Text-based PDF: Digital text was successfully extracted!
       if (combinedText.length >= 15) {
-        // If AI is configured, extract structured topics
+        // Extract structural topics from headings, sections, and concept definitions
+        const structuralTopics = extractTopicsFromDocumentStructure(pageTexts)
+
+        // If AI key is configured, perform AI semantic synthesis
         if (geminiKey || openAiKey) {
           const aiResult = await extractTopicsWithAI(combinedText, language, geminiKey, openAiKey)
-          return NextResponse.json({
-            extractedText: combinedText,
-            text: combinedText,
-            fileName: sanitizedFileName,
-            totalPages,
-            topics: aiResult.topics,
-            provider: aiResult.provider || 'pdf-parser',
-            aiAnalyzed: aiResult.topics.length > 0,
-            diagnostics:
-              aiResult.topics.length > 0
-                ? undefined
-                : `Document text extracted from ${totalPages} page(s). AI topic extraction did not identify distinct concepts.`,
-          })
+          if (aiResult.topics.length > 0) {
+            return NextResponse.json({
+              extractedText: combinedText,
+              text: combinedText,
+              fileName: sanitizedFileName,
+              totalPages,
+              topics: aiResult.topics,
+              provider: aiResult.provider || 'gemini',
+              aiAnalyzed: true,
+            })
+          }
         }
 
-        // AI is not configured: return extracted text with clean diagnostic
+        // If AI is not configured or AI returned no topics, use structural extracted topics
         return NextResponse.json({
           extractedText: combinedText,
           text: combinedText,
           fileName: sanitizedFileName,
           totalPages,
-          topics: [],
+          topics: structuralTopics,
           provider: 'pdf-parser',
           aiAnalyzed: false,
-          diagnostics: `Text extracted from ${totalPages} page(s). Configure GEMINI_API_KEY in .env.local to enable automated key topics extraction and AI summaries.`,
+          diagnostics:
+            structuralTopics.length > 0
+              ? `Extracted ${structuralTopics.length} key topics directly from PDF document structure. Configure GEMINI_API_KEY in server settings for AI-enhanced synthesis.`
+              : `Text extracted from ${totalPages} page(s). Configure GEMINI_API_KEY in server settings to enable AI-powered topic synthesis.`,
         })
       }
 
@@ -430,13 +438,12 @@ Return strictly a JSON object with:
             try {
               const parsed = JSON.parse(rawJson)
               extractedText = parsed.extractedText || ''
-              if (Array.isArray(parsed.topics)) {
-                topics = parsed.topics.map((t: any) => ({
-                  topic: String(t.topic || '').trim(),
-                  explanation: String(t.explanation || '').trim(),
-                  pageNumber: typeof t.pageNumber === 'number' ? t.pageNumber : undefined,
-                }))
-              }
+              const list = Array.isArray(parsed.topics) ? parsed.topics : []
+              topics = list.map((t: any) => ({
+                topic: String(t.topic || '').trim(),
+                explanation: String(t.explanation || '').trim(),
+                pageNumber: typeof t.pageNumber === 'number' ? t.pageNumber : undefined,
+              }))
             } catch {
               extractedText = rawJson
             }
@@ -465,14 +472,14 @@ Return strictly a JSON object with:
         }
       }
 
-      // Scanned PDF and no Gemini key
+      // Scanned PDF and no OCR provider configured
       return NextResponse.json(
         {
           configured: false,
           error:
-            'This PDF contains scanned images or photos without selectable digital text. Optical Character Recognition (OCR) for scanned PDFs requires GEMINI_API_KEY. Configure GEMINI_API_KEY in server-side .env.local, or upload a digital text-based PDF.',
+            'This PDF appears to be a scanned document or image-only file with no digital selectable text. Optical Character Recognition (OCR) is required to process scanned pages. Please upload a digital text-based PDF or configure GEMINI_API_KEY in your server environment.',
         },
-        { status: 503 }
+        { status: 422 }
       )
     }
 

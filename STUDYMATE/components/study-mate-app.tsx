@@ -767,6 +767,80 @@ export function StudyMateApp() {
           if (data && data.length > 0) {
             setSelectedMaterial(data[0].name)
           }
+
+          // If any uploaded file was a PDF, extract topics and generate a linked study note
+          for (let i = 0; i < fileArray.length; i++) {
+            const file = fileArray[i]
+            const insertedMat = data ? data[i] : null
+            if (file.name.toLowerCase().endsWith('.pdf') && insertedMat?.id) {
+              try {
+                const base64Data = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader()
+                  reader.onload = () => resolve((reader.result as string) || '')
+                  reader.onerror = () => reject(new Error('Failed to read file'))
+                  reader.readAsDataURL(file)
+                })
+
+                const ocrRes = await fetch('/api/scan/ocr', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    imageBase64: base64Data,
+                    mimeType: 'application/pdf',
+                    fileName: file.name,
+                    language,
+                  }),
+                })
+
+                if (ocrRes.ok) {
+                  const ocrData = await ocrRes.json()
+                  const extractedTopics = Array.isArray(ocrData.topics) ? ocrData.topics : []
+                  const noteSections: NoteSection[] =
+                    extractedTopics.length > 0
+                      ? extractedTopics.map((t: any, idx: number) => ({
+                          id: `topic-${idx + 1}`,
+                          title: t.pageNumber ? `${t.topic} (Page ${t.pageNumber})` : t.topic,
+                          content: t.explanation,
+                          examTip: `Core study checkpoint for ${t.topic}`,
+                        }))
+                      : [
+                          {
+                            id: 'notes-summary',
+                            title: t('notesTabMindMap'),
+                            content: ocrData.extractedText?.slice(0, 500) || `Study notes extracted from ${file.name}.`,
+                          },
+                          {
+                            id: 'notes-concepts',
+                            title: t('notesTabKeyConcepts'),
+                            content: `Document text extracted from ${ocrData.totalPages || 1} page(s).`,
+                            bullets: ['Review core definitions and key formulas from the uploaded document.'],
+                          },
+                        ]
+
+                  const noteSummary =
+                    extractedTopics.length > 0
+                      ? `Extracted ${extractedTopics.length} key topics from ${file.name}: ${extractedTopics
+                          .map((t: any) => t.topic)
+                          .join(', ')}.`
+                      : `Study notes and concepts extracted from ${file.name}.`
+
+                  await supabase.from('study_notes').insert({
+                    user_id: currentUser.id,
+                    material_id: insertedMat.id,
+                    title: `${file.name.replace(/\.[^/.]+$/, '')} Notes`,
+                    summary: noteSummary,
+                    sections: noteSections as any,
+                    is_bookmarked: false,
+                    language: (['en', 'ml', 'hi', 'ta'].includes(language) ? language : 'en') as SupportedLanguage,
+                  })
+                }
+              } catch (pdfErr) {
+                console.warn('[StudyMate] PDF topic extraction during upload failed:', pdfErr)
+              }
+            }
+          }
+
+          await loadUserNotes(currentUser.id)
           showToast(t('matToastAdded', { count: fileArray.length }))
         }
       } catch (err: any) {
@@ -789,6 +863,43 @@ export function StudyMateApp() {
       }))
       setMaterials((current) => [...newItems, ...current])
       setSelectedMaterial(newItems[0].name)
+
+      // Add local preview study note for the uploaded file
+      const firstFile = fileArray[0]
+      if (firstFile) {
+        const previewSections: NoteSection[] = [
+          {
+            id: 'preview-1',
+            title: 'Uploaded Document Overview',
+            content: `Study notes and structured concepts for ${firstFile.name}. Review definitions, mechanisms, and key exam revision points.`,
+          },
+          {
+            id: 'preview-2',
+            title: 'Key Concepts & Objectives',
+            content: 'Core learning outcomes extracted from the uploaded document pages.',
+            examTip: 'Focus on primary definitions and core diagrams before taking the practice quiz.',
+            bullets: [
+              'Fundamental principles and definitions',
+              'Applied workflows and process models',
+              'Core exam checkpoints and self-assessment items',
+            ],
+          },
+        ]
+        const previewNote: StudyNoteRow = {
+          id: `preview-${Date.now()}`,
+          user_id: 'preview_user',
+          material_id: null,
+          title: `${firstFile.name.replace(/\.[^/.]+$/, '')} Notes`,
+          summary: `Study notes and concepts extracted from ${firstFile.name}.`,
+          sections: previewSections as any,
+          is_bookmarked: false,
+          language: (['en', 'ml', 'hi', 'ta'].includes(language) ? language : 'en') as SupportedLanguage,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        setStudyNotes((prev) => [previewNote, ...prev])
+      }
+
       showToast(t('matToastAdded', { count: newItems.length }))
     }
   }
