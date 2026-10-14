@@ -46,10 +46,10 @@ import {
   Pencil,
   Info,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, safeParseApiResponse } from '@/lib/utils'
 import { AccountPanel, SettingGroup, SettingRow, ToggleRow } from '@/components/account-settings'
 import { AuthScreen, AuthMode } from '@/components/auth-screens'
-import { useLanguage, Language, SUPPORTED_LANGUAGES } from '@/lib/i18n'
+import { useLanguage, Language, SUPPORTED_LANGUAGES, LocalizedQuizQuestion } from '@/lib/i18n'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type {
   ProfileRow,
@@ -175,6 +175,9 @@ export function StudyMateApp() {
   const [quizIndex, setQuizIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, number>>({})
   const [quizDone, setQuizDone] = useState(false)
+  const [customQuizQuestions, setCustomQuizQuestions] = useState<LocalizedQuizQuestion[] | null>(null)
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false)
+  const [activeQuizTopic, setActiveQuizTopic] = useState<string>('')
   const [conversations, setConversations] = useState<TutorConversationRow[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [isLoadingConversations, setIsLoadingConversations] = useState(false)
@@ -519,12 +522,17 @@ export function StudyMateApp() {
   useEffect(() => {
     if (!isSupabaseConfigured()) return
     const supabase = createClient()
-    supabase.auth.getUser().then((res: any) => {
-      const user = res?.data?.user
-      if (user) {
-        loadUserData(user.id, user)
-      }
-    })
+    supabase.auth
+      .getUser()
+      .then((res: any) => {
+        const user = res?.data?.user
+        if (user) {
+          loadUserData(user.id, user)
+        }
+      })
+      .catch((err: any) => {
+        console.warn('[StudyMate Auth] Failed to retrieve existing user session:', err)
+      })
 
     const {
       data: { subscription },
@@ -693,10 +701,94 @@ export function StudyMateApp() {
     showToast(t('settingsToastThemeUpdated', { theme: newTheme }))
   }
 
+  const currentMaterialObj = useMemo(() => {
+    return materials.find((m) => m.name === selectedMaterial) || null
+  }, [materials, selectedMaterial])
+
+  const activeQuizQuestions = useMemo(() => {
+    return customQuizQuestions && customQuizQuestions.length > 0 ? customQuizQuestions : quizQuestions
+  }, [customQuizQuestions, quizQuestions])
+
   const score = useMemo(
-    () => quizQuestions.reduce((total, q, i) => total + (answers[i] === q.answer ? 1 : 0), 0),
-    [answers, quizQuestions]
+    () => activeQuizQuestions.reduce((total, q, i) => total + (answers[i] === q.answer ? 1 : 0), 0),
+    [answers, activeQuizQuestions]
   )
+
+  const generateQuizForMaterial = async (
+    targetMaterialName?: string,
+    requestedCount?: number,
+    difficulty?: 'Easy' | 'Medium' | 'Hard'
+  ) => {
+    const matName = targetMaterialName || selectedMaterial || currentMaterialObj?.name || 'General Study'
+    const matObj = materials.find((m) => m.name === matName) || currentMaterialObj
+    const relevantNote = studyNotes.find((n) => n.material_id === matObj?.id) || studyNotes[0]
+
+    setIsGeneratingQuiz(true)
+    try {
+      let materialContent = ''
+      if (relevantNote) {
+        const sectionsText = Array.isArray(relevantNote.sections)
+          ? (relevantNote.sections as any[]).map((s) => `${s.title}: ${s.content}`).join('\n')
+          : ''
+        materialContent = `Document: ${matName}\nSummary: ${relevantNote.summary}\nSections:\n${sectionsText}`
+      }
+
+      let qCount = requestedCount || 5
+      if (!requestedCount && userSettings?.quiz_length) {
+        if (userSettings.quiz_length === '5 questions') qCount = 5
+        else if (userSettings.quiz_length === '10 questions') qCount = 10
+        else if (userSettings.quiz_length === '15 questions') qCount = 15
+        else if (userSettings.quiz_length === '20 questions') qCount = 20
+      }
+
+      const isDbMaterial = matObj?.id && !matObj.id.startsWith('mat-')
+
+      const res = await fetch('/api/quiz/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          materialId: isDbMaterial ? matObj.id : undefined,
+          topic: matName,
+          materialName: matName,
+          language,
+          difficulty: difficulty || 'Medium',
+          questionCount: qCount,
+          notesContext: relevantNote?.summary || '',
+          notesSections: Array.isArray(relevantNote?.sections) ? relevantNote.sections : [],
+          materialContent,
+          explanationStyle: userSettings?.explanation_style || 'Detailed',
+        }),
+      })
+
+      const parseResult = await safeParseApiResponse<any>(res)
+      if (!parseResult.ok || !parseResult.data?.questions) {
+        const errorMsg = parseResult.error || parseResult.data?.error || `Failed to generate quiz (${res.status})`
+        showToast(errorMsg)
+        return false
+      }
+
+      const generatedQuestions: LocalizedQuizQuestion[] = parseResult.data.questions
+      if (generatedQuestions.length === 0) {
+        showToast('No questions could be generated for this material.')
+        return false
+      }
+
+      setCustomQuizQuestions(generatedQuestions)
+      setActiveQuizTopic(matName)
+      setQuizIndex(0)
+      setAnswers({})
+      setQuizDone(false)
+      const sourceBadge = parseResult.data.source === 'structural' ? ' (Structured Analysis)' : ' (AI Generated)'
+      showToast(`Generated ${generatedQuestions.length} questions for "${matName}"${sourceBadge}`)
+      return true
+    } catch (err: any) {
+      console.error('[StudyMate Quiz] Failed to generate quiz:', err)
+      showToast('Error communicating with quiz generator.')
+      return false
+    } finally {
+      setIsGeneratingQuiz(false)
+    }
+  }
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -724,10 +816,6 @@ export function StudyMateApp() {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [profileMenuOpen])
-
-  const currentMaterialObj = useMemo(() => {
-    return materials.find((m) => m.name === selectedMaterial) || null
-  }, [materials, selectedMaterial])
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files?.length) return
@@ -1132,13 +1220,13 @@ export function StudyMateApp() {
     setIsSavingQuizAttempt(true)
     try {
       const supabase = createClient()
-      const totalQ = quizQuestions.length
+      const totalQ = activeQuizQuestions.length
       const percentage = Math.round((attemptScore / totalQ) * 100)
-      const topicName = currentMaterialObj?.name || selectedMaterial || 'General Biology'
+      const topicName = activeQuizTopic || currentMaterialObj?.name || selectedMaterial || 'Study Material'
 
       const answersPayload: Json = {
         answers: answersRecord,
-        summary: quizQuestions.map((q, i) => ({
+        summary: activeQuizQuestions.map((q, i) => ({
           question: q.question,
           topic: q.topic,
           selected_option: answersRecord[i] ?? null,
@@ -1362,6 +1450,18 @@ export function StudyMateApp() {
 
     // Call server-side AI chat API route
     try {
+      // Assemble document notes context for AI tutor
+      const relevantNote = studyNotes.find((n) => n.material_id === currentMaterialObj?.id) || studyNotes[0]
+      let noteDetails = ''
+      if (relevantNote) {
+        const sectionsText = Array.isArray(relevantNote.sections)
+          ? (relevantNote.sections as any[]).map((s) => `${s.title}: ${s.content}`).join('\n')
+          : ''
+        noteDetails = `\nNotes Title: ${relevantNote.title}\nSummary: ${relevantNote.summary}\nKey Content:\n${sectionsText}`
+      }
+
+      const richMaterialContext = `Study Material: ${currentMaterialObj?.name || selectedMaterial || 'General'}${noteDetails}`.slice(0, 4000)
+
       const res = await fetch('/api/tutor/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1369,13 +1469,14 @@ export function StudyMateApp() {
           messages: updatedHistory,
           topic: selectedMaterial || 'General Study',
           language,
-          materialContext: currentMaterialObj?.name,
+          materialContext: richMaterialContext,
         }),
       })
 
-      const data = await res.json()
+      const parseResult = await safeParseApiResponse<any>(res)
+      const data = parseResult.data
 
-      if (res.ok && data.reply) {
+      if (parseResult.ok && data?.reply) {
         const aiMsgObj = { role: 'ai' as const, text: data.reply }
         setChat((prev) => [...prev, aiMsgObj])
 
@@ -1397,7 +1498,7 @@ export function StudyMateApp() {
         setChat((prev) => [...prev, { role: 'ai' as const, text: unconfiguredNotice }])
         showToast('AI API key required in .env.local')
       } else {
-        const errMsg = data?.error || 'Failed to receive response from AI tutor.'
+        const errMsg = parseResult.error || data?.error || 'Failed to receive response from AI tutor.'
         setChat((prev) => [
           ...prev,
           { role: 'ai' as const, text: `⚠️ Error: ${errMsg}` },
@@ -1891,6 +1992,16 @@ export function StudyMateApp() {
               onCompleteQuiz={saveQuizAttempt}
               isSaving={isSavingQuizAttempt}
               userSignedIn={Boolean(currentUser?.id)}
+              questions={activeQuizQuestions}
+              onGenerateQuiz={generateQuizForMaterial}
+              isGenerating={isGeneratingQuiz}
+              topicName={activeQuizTopic || currentMaterialObj?.name || selectedMaterial}
+              materialName={currentMaterialObj?.name || selectedMaterial}
+              materials={materials}
+              onSelectMaterial={(name) => {
+                setSelectedMaterial(name)
+                generateQuizForMaterial(name)
+              }}
             />
           )}
           {screen === 'AI Tutor' && (
@@ -1922,6 +2033,8 @@ export function StudyMateApp() {
               navigate={navigate}
               showToast={showToast}
               quizAttempts={quizAttempts}
+              materials={materials}
+              notes={studyNotes}
               isLoading={isLoadingQuizAttempts}
               userSignedIn={Boolean(currentUser?.id)}
               onDeleteAttempt={deleteQuizAttempt}
@@ -1937,6 +2050,7 @@ export function StudyMateApp() {
               onSaveScanQuery={handleSaveScanQuery}
               onDeleteScanQuery={handleDeleteScanQuery}
               currentMaterial={currentMaterialObj}
+              notes={studyNotes}
               language={language}
               userSignedIn={Boolean(currentUser?.id)}
               navigate={navigate}
@@ -2061,7 +2175,7 @@ function Dashboard({
   }, [t, currentUser?.name])
 
   const avgScore = useMemo(() => {
-    if (!userSignedIn || quizAttempts.length === 0) return 72
+    if (!userSignedIn || quizAttempts.length === 0) return 0
     return Math.round(quizAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / quizAttempts.length)
   }, [userSignedIn, quizAttempts])
 
@@ -2101,9 +2215,11 @@ function Dashboard({
                 <span className="text-[#4f5bd5] dark:text-[#9aa3f8] font-bold">{t('matStatusProcessing')}</span>
               </div>
               <h3 className="font-bold text-base sm:text-lg text-[#202337] dark:text-white">
-                Cell Structure & Function
+                {selected || materials[0]?.name || 'Study Materials'}
               </h3>
-              <p className="mt-0.5 text-xs text-[#898b98] dark:text-[#84879c]">{t('navNotes')} &bull; 12 min left</p>
+              <p className="mt-0.5 text-xs text-[#898b98] dark:text-[#84879c]">
+                {t('navNotes')} &bull; {materials.length > 0 ? `${materials.length} files available` : 'Ready for study'}
+              </p>
             </div>
           </div>
           <button
@@ -2115,7 +2231,7 @@ function Dashboard({
           </button>
         </div>
         <div className="h-1.5 bg-[#f0f0ec] dark:bg-[#25273b]">
-          <div className="h-1.5 w-[68%] rounded-r-full bg-[#4f5bd5]" />
+          <div className="h-1.5 w-[85%] rounded-r-full bg-[#4f5bd5]" />
         </div>
       </Card>
 
@@ -2198,14 +2314,16 @@ function Dashboard({
                 <p className="mt-1 text-xs leading-relaxed text-[#777989] dark:text-[#9ea1b5]">
                   {userSignedIn && quizAttempts.length > 0
                     ? `${quizAttempts.length} quizzes recorded`
-                    : `${t('dashScoreSub')} • 84%`}
+                    : userSignedIn
+                    ? 'No quizzes recorded yet'
+                    : 'Sign in to record progress'}
                 </p>
               </div>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[#efefec] dark:border-[#282a3e] flex items-center justify-between text-xs text-[#898b98] dark:text-[#84879c]">
-            <span>{t('dashStreakLabel')}: <strong className="text-[#202337] dark:text-white">{t('dashStreakValue')}</strong></span>
-            <span>{t('dashMaterialsLabel')}: <strong className="text-[#438568] dark:text-[#5ec290]">{t('dashMaterialsValue')}</strong></span>
+            <span>{t('dashStreakLabel')}: <strong className="text-[#202337] dark:text-white">{quizAttempts.length > 0 ? `${quizAttempts.length} active` : '0 active'}</strong></span>
+            <span>{t('dashMaterialsLabel')}: <strong className="text-[#438568] dark:text-[#5ec290]">{materials.length} {materials.length === 1 ? 'material' : 'materials'}</strong></span>
           </div>
         </Card>
       </div>
@@ -2619,13 +2737,14 @@ function Notes({
     return notes[0]
   }, [notes, currentMaterial])
 
-  const defaultSummary =
-    'Cells are the fundamental units of all living organisms. Every cell maintains homeostasis through controlled transport across its boundary.'
-  const defaultMembraneText =
-    'The cell membrane is a selectively permeable phospholipid bilayer with embedded proteins that controls what enters and exits the cell.'
+  const cleanMaterialName = materialName ? materialName.replace(/\.[^/.]+$/, '') : ''
 
-  const displayTitle = attachedNote?.title || 'Cell Structure & Function'
-  const displaySummary = attachedNote?.summary || defaultSummary
+  const displayTitle = attachedNote?.title || (cleanMaterialName ? `${cleanMaterialName} Notes` : 'Study Notes')
+  const displaySummary =
+    attachedNote?.summary ||
+    (cleanMaterialName
+      ? `Structured revision notes and comprehensive concepts for ${cleanMaterialName}. Review key definitions, operational mechanisms, and essential exam takeaways.`
+      : 'Comprehensive revision notes and structured concepts for your selected study material.')
   const isBookmarked = attachedNote ? Boolean(attachedNote.is_bookmarked) : localBookmarked
 
   // Extract sections
@@ -2633,32 +2752,36 @@ function Notes({
     if (attachedNote && Array.isArray(attachedNote.sections) && attachedNote.sections.length > 0) {
       return attachedNote.sections as unknown as NoteSection[]
     }
+    const topicLabel = cleanMaterialName || 'Core Topic'
     return [
       {
         id: 'notes-summary',
-        title: t('notesTabMindMap'),
-        content:
-          'Cells are the basic structural and functional units of all known organisms. Each cell contains specialized organelle machinery operating in synergy to maintain cellular metabolism and homeostasis.',
+        title: `${t('notesTabMindMap')} • ${topicLabel}`,
+        content: `Comprehensive learning overview and structured study objectives for ${topicLabel}. Study foundational terminology and key operational processes before taking the practice quiz.`,
       },
       {
-        id: 'notes-membrane',
-        title: `${t('notesTabKeyConcepts')} • The Cell Membrane`,
-        content: `${defaultMembraneText} This selective permeability is essential for maintaining constant internal osmotic pressure and chemical concentrations.`,
-        examTip:
-          'Think of the cell membrane like an automated airport security checkpoint. It only allows authorized molecules with the right molecular pass through, while preventing foreign contaminants from entering.',
-      },
-      {
-        id: 'notes-concepts',
-        title: t('notesOrganellesTitle'),
-        content: 'Major organelles responsible for cellular functions:',
+        id: 'notes-core-concepts',
+        title: `${t('notesTabKeyConcepts')} • ${topicLabel}`,
+        content: `Essential conceptual framework, principles, and high-yield study outcomes for ${topicLabel}. Review core relationships and mechanisms to ensure full mastery.`,
+        examTip: `Active recall tip: Explain the primary mechanisms of ${topicLabel} in your own words, then take the Interactive Quiz to test retention.`,
         bullets: [
-          'Nucleus: Houses the genetic code (DNA) and orchestrates cellular gene expression.',
-          'Mitochondria: Synthesize ATP via cellular respiration, acting as the cell’s energetic powerplants.',
-          'Ribosomes: Translate messenger RNA instructions to synthesize polypeptide chains.',
+          'Foundational definitions and primary terminology',
+          'Core mechanisms, relationships, and operational rules',
+          'Key exam checkpoints and self-assessment items',
+        ],
+      },
+      {
+        id: 'notes-revision',
+        title: 'Quick Revision & Summary Points',
+        content: `High-yield revision notes for ${topicLabel}:`,
+        bullets: [
+          'Review all primary definitions and terms',
+          'Focus on cause-and-effect relationships within the material',
+          'Practice with AI Tutor questions and interactive flashcard recall',
         ],
       },
     ]
-  }, [attachedNote, t, defaultMembraneText])
+  }, [attachedNote, t, cleanMaterialName])
 
   const handleCopy = () => {
     const sectionsText = dynamicSections
@@ -3044,6 +3167,13 @@ function Quiz({
   onCompleteQuiz,
   isSaving = false,
   userSignedIn = false,
+  questions,
+  onGenerateQuiz,
+  isGenerating = false,
+  topicName,
+  materialName,
+  materials = [],
+  onSelectMaterial,
 }: {
   quizIndex: number
   setQuizIndex: (i: number) => void
@@ -3056,11 +3186,21 @@ function Quiz({
   onCompleteQuiz?: (score: number, answers: Record<number, number>) => Promise<void>
   isSaving?: boolean
   userSignedIn?: boolean
+  questions?: LocalizedQuizQuestion[]
+  onGenerateQuiz?: (topic?: string, count?: number, diff?: 'Easy' | 'Medium' | 'Hard') => Promise<boolean>
+  isGenerating?: boolean
+  topicName?: string
+  materialName?: string
+  materials?: Material[]
+  onSelectMaterial?: (name: string) => void
 }) {
-  const { t, quizQuestions } = useLanguage()
-  const q = quizQuestions[quizIndex] || quizQuestions[0]
+  const { t, quizQuestions: defaultQuizQuestions } = useLanguage()
+  const effectiveQuestions = questions && questions.length > 0 ? questions : defaultQuizQuestions
+  const q = effectiveQuestions[quizIndex] || effectiveQuestions[0]
   const currentAnswerSelected = answers[quizIndex] !== undefined
   const hasSavedRef = useRef(false)
+  const [selectedCount, setSelectedCount] = useState<number>(5)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium')
 
   const handleSubmitQuiz = async () => {
     setQuizDone(true)
@@ -3077,14 +3217,20 @@ function Quiz({
     setAnswers({})
   }
 
+  const handleGenerateFresh = async () => {
+    if (onGenerateQuiz) {
+      await onGenerateQuiz(materialName, selectedCount, selectedDifficulty)
+    }
+  }
+
   if (quizDone) {
-    const percentage = Math.round((score / quizQuestions.length) * 100)
+    const percentage = Math.round((score / effectiveQuestions.length) * 100)
     const isPassing = percentage >= 66
 
     return (
       <>
         <SectionTitle
-          eyebrow={`${t('navQuiz')} • ${t('notesMainHeading')}`}
+          eyebrow={`${t('navQuiz')} • ${topicName || materialName || t('notesMainHeading')}`}
           title={t('quizCompletedTitle')}
           description={t('quizDesc')}
         />
@@ -3105,7 +3251,7 @@ function Quiz({
               {isPassing ? t('quizFeedbackGreat') : t('quizFeedbackReview')}
             </h3>
             <p className="mt-1 text-xs text-[#8b8d9a] dark:text-[#84879c]">
-              {score} / {quizQuestions.length} • {percentage}%
+              {score} / {effectiveQuestions.length} • {percentage}%
             </p>
 
             {userSignedIn && (
@@ -3122,12 +3268,29 @@ function Quiz({
               </div>
             )}
 
+            {onGenerateQuiz && (
+              <button
+                disabled={isGenerating}
+                onClick={handleGenerateFresh}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4f5bd5] px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-[#434ec4] transition active:scale-[0.99] cursor-pointer disabled:opacity-50"
+              >
+                {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                <span>{isGenerating ? 'Generating Quiz...' : 'Generate New AI Quiz'}</span>
+              </button>
+            )}
+
             <button
               onClick={handleRetakeQuiz}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4f5bd5] px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-[#434ec4] transition active:scale-[0.99] cursor-pointer"
+              className={cn(
+                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition active:scale-[0.99] cursor-pointer',
+                onGenerateQuiz
+                  ? 'mt-2 border border-[#deded9] text-[#4b4e60] hover:bg-[#f5f5f2] dark:border-[#32354e] dark:bg-[#1e2030] dark:text-[#d0d3e5] dark:hover:bg-[#25283d]'
+                  : 'mt-6 bg-[#4f5bd5] text-white shadow-xs hover:bg-[#434ec4]'
+              )}
             >
               <RotateCcw size={14} /> {t('quizRetakeBtn')}
             </button>
+
             <button
               onClick={() => navigate('My Progress')}
               className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#deded9] px-4 py-2 text-xs font-semibold text-[#4f5bd5] hover:bg-[#edeefd]/40 dark:border-[#32354e] dark:bg-[#1e2030] dark:text-[#9aa3f8] dark:hover:bg-[#25283d] transition cursor-pointer"
@@ -3147,11 +3310,11 @@ function Quiz({
               {t('quizExplanationTitle')}
             </h3>
             <div className="flex flex-col gap-4">
-              {quizQuestions.map((item, i) => {
+              {effectiveQuestions.map((item, i) => {
                 const isCorrect = answers[i] === item.answer
                 return (
                   <div
-                    key={item.question}
+                    key={item.question + i}
                     className={cn(
                       'rounded-xl border p-4 transition',
                       isCorrect
@@ -3205,29 +3368,100 @@ function Quiz({
 
   return (
     <>
-      <div className="mb-6 flex items-end justify-between">
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <SectionTitle
-          eyebrow={t('navQuiz')}
+          eyebrow={`${t('navQuiz')} • ${topicName || materialName || 'Study Material'}`}
           title={t('quizTitle')}
           description={t('quizDesc')}
         />
-        <span className="text-xs sm:text-sm font-bold text-[#4f5bd5] bg-[#edeefd] dark:text-[#9aa3f8] dark:bg-[#4f5bd5]/25 px-3 py-1.5 rounded-xl">
-          {t('quizQuestionProgress', { current: quizIndex + 1, total: quizQuestions.length })}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs sm:text-sm font-bold text-[#4f5bd5] bg-[#edeefd] dark:text-[#9aa3f8] dark:bg-[#4f5bd5]/25 px-3 py-1.5 rounded-xl">
+            {t('quizQuestionProgress', { current: quizIndex + 1, total: effectiveQuestions.length })}
+          </span>
+        </div>
       </div>
+
+      {/* Quiz Generation Toolbar */}
+      {onGenerateQuiz && (
+        <Card className="mb-6 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-bold text-[#202337] dark:text-white flex items-center gap-1.5">
+                <Sparkles size={14} className="text-[#4f5bd5] dark:text-[#9aa3f8]" />
+                Generate AI Quiz:
+              </span>
+              {materials.length > 0 && onSelectMaterial && (
+                <select
+                  value={materialName || ''}
+                  onChange={(e) => onSelectMaterial(e.target.value)}
+                  className="rounded-lg border border-[#e2e2de] bg-white px-2.5 py-1 text-xs text-[#202337] dark:border-[#32354e] dark:bg-[#1a1b29] dark:text-white"
+                >
+                  {materials.map((m) => (
+                    <option key={m.id || m.name} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <div className="flex items-center gap-1 text-xs text-[#6e7182] dark:text-[#8b8e9f]">
+                <span>Questions:</span>
+                {[3, 5, 10].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setSelectedCount(count)}
+                    className={cn(
+                      'rounded-md px-2 py-0.5 text-xs font-semibold transition cursor-pointer',
+                      selectedCount === count
+                        ? 'bg-[#4f5bd5] text-white'
+                        : 'bg-[#f0f0ed] text-[#4b4e60] dark:bg-[#282a3e] dark:text-[#d0d3e5]'
+                    )}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-[#6e7182] dark:text-[#8b8e9f]">
+                <span>Difficulty:</span>
+                {(['Easy', 'Medium', 'Hard'] as const).map((diff) => (
+                  <button
+                    key={diff}
+                    onClick={() => setSelectedDifficulty(diff)}
+                    className={cn(
+                      'rounded-md px-2 py-0.5 text-xs font-semibold transition cursor-pointer',
+                      selectedDifficulty === diff
+                        ? 'bg-[#4f5bd5] text-white'
+                        : 'bg-[#f0f0ed] text-[#4b4e60] dark:bg-[#282a3e] dark:text-[#d0d3e5]'
+                    )}
+                  >
+                    {diff}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              disabled={isGenerating}
+              onClick={handleGenerateFresh}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-[#4f5bd5] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#434ec4] transition cursor-pointer disabled:opacity-50"
+            >
+              {isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              <span>{isGenerating ? 'Generating...' : 'Generate New Questions'}</span>
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* Progress Bar */}
       <div className="mb-7 h-2 rounded-full bg-[#e8e8e4] dark:bg-[#282a3e] overflow-hidden">
         <div
           className="h-full rounded-full bg-[#4f5bd5] transition-all duration-300"
-          style={{ width: `${((quizIndex + 1) / quizQuestions.length) * 100}%` }}
+          style={{ width: `${((quizIndex + 1) / effectiveQuestions.length) * 100}%` }}
         />
       </div>
 
       <Card className="mx-auto max-w-3xl p-6 sm:p-8 md:p-10">
         <div className="mb-6 flex items-center justify-between">
           <span className="rounded-md bg-[#edeefd] dark:bg-[#4f5bd5]/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#4f5bd5] dark:text-[#9aa3f8]">
-            {t('quizQuestionProgress', { current: quizIndex + 1, total: quizQuestions.length })}
+            {t('quizQuestionProgress', { current: quizIndex + 1, total: effectiveQuestions.length })}
           </span>
           <span className="text-xs text-[#9799a5] dark:text-[#84879c]">{q.topic}</span>
         </div>
@@ -3241,7 +3475,7 @@ function Quiz({
             const isSelected = answers[quizIndex] === i
             return (
               <button
-                key={option}
+                key={option + i}
                 onClick={() => setAnswers({ ...answers, [quizIndex]: i })}
                 className={cn(
                   'flex items-center gap-3.5 rounded-xl border p-4 text-left text-xs sm:text-sm transition active:scale-[0.99] cursor-pointer',
@@ -3276,7 +3510,7 @@ function Quiz({
             <ChevronLeft size={16} /> {t('quizPrevBtn')}
           </button>
 
-          {quizIndex === quizQuestions.length - 1 ? (
+          {quizIndex === effectiveQuestions.length - 1 ? (
             <button
               disabled={!currentAnswerSelected || isSaving}
               onClick={handleSubmitQuiz}
@@ -3677,6 +3911,8 @@ function Progress({
   navigate,
   showToast,
   quizAttempts = [],
+  materials = [],
+  notes = [],
   isLoading = false,
   userSignedIn = false,
   onDeleteAttempt,
@@ -3684,6 +3920,8 @@ function Progress({
   navigate: (s: Screen) => void
   showToast: (m: string) => void
   quizAttempts?: QuizAttemptRow[]
+  materials?: Material[]
+  notes?: StudyNoteRow[]
   isLoading?: boolean
   userSignedIn?: boolean
   onDeleteAttempt?: (id: string) => Promise<void> | void
@@ -3706,21 +3944,13 @@ function Progress({
   }, [quizAttempts, timeframe, userSignedIn])
 
   const stats = useMemo(() => {
-    if (!userSignedIn) {
-      return {
-        avgScore: 84,
-        totalQuizzes: 12,
-        totalQuestions: 8,
-        isLive: false,
-      }
-    }
     const count = filteredAttempts.length
     if (count === 0) {
       return {
         avgScore: 0,
         totalQuizzes: 0,
         totalQuestions: 0,
-        isLive: true,
+        isLive: userSignedIn,
       }
     }
     const totalQ = filteredAttempts.reduce((acc, curr) => acc + (curr.total_questions || 0), 0)
@@ -3732,6 +3962,31 @@ function Progress({
       isLive: true,
     }
   }, [filteredAttempts, userSignedIn])
+
+  const spacedRepTopics = useMemo(() => {
+    if (quizAttempts.length > 0) {
+      const uniqueTopics = Array.from(new Set(quizAttempts.map((a) => a.topic).filter(Boolean)))
+      return uniqueTopics.slice(0, 3).map((topic) => {
+        const attempt = quizAttempts.find((a) => a.topic === topic)
+        const pct = attempt?.percentage ?? 75
+        const badge = pct < 60 ? t('progMasteryReview') : pct < 85 ? t('progMasteryModerate') : t('progMasteryHigh')
+        return { topic, badge }
+      })
+    }
+    if (notes.length > 0) {
+      return notes.slice(0, 3).map((n) => ({
+        topic: n.title,
+        badge: t('progMasteryModerate'),
+      }))
+    }
+    if (materials.length > 0) {
+      return materials.slice(0, 3).map((m) => ({
+        topic: m.name.replace(/\.[^/.]+$/, ''),
+        badge: t('progMasteryModerate'),
+      }))
+    }
+    return []
+  }, [quizAttempts, notes, materials, t])
 
   return (
     <>
@@ -3920,28 +4175,22 @@ function Progress({
               </div>
             )
           ) : (
-            <div className="divide-y divide-[#efefec] dark:divide-[#282a3e]">
-              {[
-                { name: 'Cell Structure & Function', score: '84%', date: 'Today', correct: '3/3' },
-                { name: 'Organic Chemistry Basics', score: '76%', date: 'Yesterday', correct: '4/5' },
-                { name: 'Introduction to Psychology', score: '92%', date: 'Oct 10', correct: '5/5' },
-              ].map((item) => (
-                <div key={item.name + item.date} className="flex items-center gap-3.5 py-3.5 first:pt-0 last:pb-0">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#e8f2ed] dark:bg-[#14291d] text-[#3b7e5e] dark:text-[#5ec290]">
-                    <Check size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#202337] dark:text-white truncate">{item.name}</span>
-                      <span className="text-[10px] text-[#8d8f9e] bg-[#f0f0ed] dark:bg-[#282a3e] px-1.5 py-0.5 rounded font-normal">Demo</span>
-                    </div>
-                    <div className="mt-0.5 text-xs text-[#9698a5] dark:text-[#84879c]">
-                      {item.date} &bull; {item.correct}
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold text-[#3b7e5e] dark:text-[#5ec290]">{item.score}</div>
-                </div>
-              ))}
+            <div className="py-8 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#edeefd] dark:bg-[#4f5bd5]/20 text-[#4f5bd5] dark:text-[#9aa3f8] mb-3">
+                <Target size={22} />
+              </div>
+              <div className="text-sm font-semibold text-[#202337] dark:text-white">
+                Sign in to track verified quiz attempts
+              </div>
+              <p className="mt-1 text-xs text-[#8d8f9e] dark:text-[#84879c] max-w-sm mx-auto">
+                Completed tests and scores are automatically saved to your profile and analyzed for spaced repetition.
+              </p>
+              <button
+                onClick={() => navigate('Interactive Quiz')}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#4f5bd5] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#434ec4] transition cursor-pointer"
+              >
+                <span>Take a Practice Quiz</span>
+              </button>
             </div>
           )}
         </Card>
@@ -3954,32 +4203,38 @@ function Progress({
           <p className="text-xs text-[#8d8f9e] dark:text-[#84879c] mb-4">
             {t('progReviewTodayItem')}
           </p>
-          <div className="space-y-3">
-            {[
-              { topic: 'Cell organelles & ATP synthesis', badge: t('progMasteryHigh') },
-              { topic: 'Phospholipid bilayer transport', badge: t('progMasteryModerate') },
-              { topic: 'Homeostatic osmotic equilibrium', badge: t('progMasteryReview') },
-            ].map((item) => (
-              <div
-                key={item.topic}
-                className="flex items-center justify-between gap-3 rounded-xl bg-[#fbfaf7] border-[#f3efe5] dark:bg-[#1e1c18] dark:border-[#383327] p-3.5 border"
-              >
-                <div>
-                  <div className="text-xs sm:text-sm font-semibold text-[#202337] dark:text-white">{item.topic}</div>
-                  <div className="mt-0.5 text-[10px] text-[#b98534] dark:text-[#e5ab56] font-medium">{item.badge}</div>
-                </div>
-                <button
-                  onClick={() => {
-                    navigate('AI Notes')
-                    showToast(`${t('progStartRevisionBtn')}: ${item.topic}`)
-                  }}
-                  className="rounded-lg bg-white border border-[#deded9] dark:border-[#383327] dark:bg-[#26241e] dark:text-[#e5ab56] dark:hover:border-[#e5ab56] px-3 py-1.5 text-xs font-semibold text-[#4f5bd5] hover:border-[#bfc3f1] transition shrink-0"
+          {spacedRepTopics.length > 0 ? (
+            <div className="space-y-3">
+              {spacedRepTopics.map((item) => (
+                <div
+                  key={item.topic}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[#fbfaf7] border-[#f3efe5] dark:bg-[#1e1c18] dark:border-[#383327] p-3.5 border"
                 >
-                  {t('progStartRevisionBtn')}
-                </button>
-              </div>
-            ))}
-          </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs sm:text-sm font-semibold text-[#202337] dark:text-white truncate">
+                      {item.topic}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-[#b98534] dark:text-[#e5ab56] font-medium">
+                      {item.badge}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigate('AI Notes')
+                      showToast(`${t('progStartRevisionBtn')}: ${item.topic}`)
+                    }}
+                    className="rounded-lg bg-white border border-[#deded9] dark:border-[#383327] dark:bg-[#26241e] dark:text-[#e5ab56] dark:hover:border-[#e5ab56] px-3 py-1.5 text-xs font-semibold text-[#4f5bd5] hover:border-[#bfc3f1] transition shrink-0 cursor-pointer"
+                  >
+                    {t('progStartRevisionBtn')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-xs text-[#8d8f9e] dark:text-[#84879c]">
+              Upload study materials or complete a quiz to generate personalized spaced repetition recommendations.
+            </div>
+          )}
         </Card>
       </div>
     </>
@@ -3999,6 +4254,7 @@ function Scan({
   onSaveScanQuery,
   onDeleteScanQuery,
   currentMaterial,
+  notes = [],
   language,
   userSignedIn = false,
   navigate,
@@ -4018,6 +4274,7 @@ function Scan({
   }) => Promise<ScanQueryRow | null>
   onDeleteScanQuery?: (id: string) => Promise<boolean>
   currentMaterial?: Material | null
+  notes?: StudyNoteRow[]
   language: Language
   userSignedIn?: boolean
   navigate?: (s: Screen) => void
@@ -4094,10 +4351,11 @@ function Scan({
           }),
         })
 
-        const data = await res.json()
-        const textContent = (data.extractedText || data.text || '').trim()
+        const parseResult = await safeParseApiResponse<any>(res)
+        const data = parseResult.data
 
-        if (res.ok) {
+        if (parseResult.ok && data) {
+          const textContent = (data.extractedText || data.text || '').trim()
           if (textContent) {
             setScanText(textContent)
           }
@@ -4119,12 +4377,14 @@ function Scan({
           } else {
             setScanDiagnostics(null)
           }
-        } else if (res.status === 503 || !data.configured) {
-          setExtractError(data.error || data.message || 'Visual OCR requires GEMINI_API_KEY.')
-          showToast(data.error || data.message || 'Visual OCR requires an active GEMINI_API_KEY.')
+        } else if (res.status === 503 || !data?.configured) {
+          const msg = parseResult.error || data?.error || data?.message || 'Visual OCR requires GEMINI_API_KEY.'
+          setExtractError(msg)
+          showToast(msg)
         } else {
-          setExtractError(data.error || 'Failed to detect readable text in this file.')
-          showToast(data.error || 'OCR could not detect readable text in this file.')
+          const msg = parseResult.error || data?.error || 'Failed to detect readable text in this file.'
+          setExtractError(msg)
+          showToast(msg)
         }
       } catch (err: any) {
         setExtractError(err?.message || 'Network error during document scanning.')
@@ -4152,11 +4412,18 @@ function Scan({
     setAnswerError(null)
 
     try {
-      const docContext = mode === 'notes'
-        ? (currentMaterial?.name
-            ? `Reference Material: ${currentMaterial.name}. Topic: Cell Biology and Organelles. The plasma membrane is composed of a phospholipid bilayer with embedded transport proteins, maintaining selective permeability and ion gradients. Mitochondria are the powerhouse of the cell, synthesizing ATP through oxidative phosphorylation using ATP synthase.`
-            : 'Cell Biology and Organelles: The plasma membrane is composed of a phospholipid bilayer with embedded transport proteins, maintaining selective permeability and ion gradients. Mitochondria are the powerhouse of the cell, synthesizing ATP through oxidative phosphorylation using ATP synthase.')
-        : undefined
+      let docContext: string | undefined = undefined
+      if (mode === 'notes') {
+        const relevantNote = notes?.find((n) => n.material_id === currentMaterial?.id) || notes?.[0]
+        if (relevantNote) {
+          const sectionsText = Array.isArray(relevantNote.sections)
+            ? (relevantNote.sections as any[]).map((s) => `${s.title}: ${s.content}`).join(' ')
+            : ''
+          docContext = `Reference Material: ${currentMaterial?.name || relevantNote.title}. Summary: ${relevantNote.summary}. ${sectionsText}`.slice(0, 3500)
+        } else if (currentMaterial?.name) {
+          docContext = `Reference Material: ${currentMaterial.name}. Answer based on this study material context.`
+        }
+      }
 
       const res = await fetch('/api/scan/answer', {
         method: 'POST',
@@ -4169,10 +4436,11 @@ function Scan({
         }),
       })
 
-      const data = await res.json()
+      const parseResult = await safeParseApiResponse<any>(res)
+      const data = parseResult.data
 
-      if (!res.ok) {
-        const msg = data.error || 'Failed to generate answer from scan.'
+      if (!parseResult.ok || !data) {
+        const msg = parseResult.error || data?.error || 'Failed to generate answer from scan.'
         setAnswerError(msg)
         showToast(msg)
         return
@@ -4688,71 +4956,16 @@ function Scan({
             </div>
           )
         ) : (
-          <div className="divide-y divide-[#efefec] dark:divide-[#282a3e]">
-            {[
-              {
-                id: 'demo-1',
-                q: 'How does the phospholipid bilayer achieve selective permeability?',
-                a: 'The phospholipid bilayer possesses an amphipathic nature with hydrophobic fatty acid tails pointing inward and hydrophilic phosphate heads facing outward. Nonpolar, small molecules (O2, CO2) diffuse freely, while large polar molecules and charged ions require specialized transport proteins.',
-                citation: 'Biology – Cell Structure.pdf • Verified Citation',
-                conf: '98%',
-                date: 'Today, 2:30 PM',
-              },
-              {
-                id: 'demo-2',
-                q: 'What role does ATP synthase play in the mitochondrial inner membrane?',
-                a: 'ATP synthase is an enzymatic complex that functions as a rotary molecular motor. It couples the downhill electrochemical proton gradient across the inner membrane with the phosphorylation of ADP to produce ATP.',
-                citation: 'Biochemistry – Cellular Respiration.pdf',
-                conf: '96%',
-                date: 'Yesterday',
-              },
-            ].map((demo) => (
-              <div key={demo.id} className="py-3.5 first:pt-0 last:pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-[#edeefd] text-[#4550c9] dark:bg-[#4f5bd5]/20 dark:text-[#9aa3f8]">
-                        Notes Grounded
-                      </span>
-                      <span className="text-[10px] text-[#8d8f9e] bg-[#f0f0ed] dark:bg-[#282a3e] px-1.5 py-0.5 rounded font-normal">
-                        Demo
-                      </span>
-                      <span className="text-[11px] text-[#8d8f9e] dark:text-[#84879c]">
-                        {demo.date}
-                      </span>
-                      <span className="text-[10px] font-bold text-[#3b7e5e] dark:text-[#5ec290] bg-[#eef8f2] dark:bg-[#14281e] px-2 py-0.5 rounded-full">
-                        {demo.conf}
-                      </span>
-                    </div>
-                    <div className="text-sm font-bold text-[#202337] dark:text-white">
-                      {demo.q}
-                    </div>
-                    <div className="mt-2 text-xs leading-relaxed text-[#55586d] dark:text-[#b8bad0] bg-[#f9f9f8] dark:bg-[#1c1d2d] rounded-xl p-3 border border-[#ededed] dark:border-[#2a2c40]">
-                      {demo.a}
-                      <div className="mt-2 text-[10px] font-medium text-[#777989] dark:text-[#84879c] pt-1.5 border-t border-[#ededed] dark:border-[#282a3e]">
-                        Source: <span className="text-[#4f5bd5] dark:text-[#9aa3f8]">{demo.citation}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setScanText(demo.q)
-                      setAnswerResult({
-                        answer: demo.a,
-                        source: demo.citation,
-                        confidence: demo.conf,
-                      })
-                      showToast('Loaded demo query into editor')
-                    }}
-                    className="rounded-lg p-1.5 text-[#8d8f9e] hover:text-[#4f5bd5] hover:bg-[#edeefd]/40 transition cursor-pointer"
-                    title="Load into editor"
-                  >
-                    <Search size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="py-8 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#edeefd] dark:bg-[#4f5bd5]/20 text-[#4f5bd5] dark:text-[#9aa3f8] mb-3">
+              <History size={22} />
+            </div>
+            <div className="text-sm font-semibold text-[#202337] dark:text-white">
+              No scan query history yet
+            </div>
+            <p className="mt-1 text-xs text-[#8d8f9e] dark:text-[#84879c] max-w-sm mx-auto">
+              Scan images or ask questions based on your notes above to see verified answers and source citations saved here.
+            </p>
           </div>
         )}
       </Card>

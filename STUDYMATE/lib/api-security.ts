@@ -181,3 +181,35 @@ export function sanitizePromptText(text: string, maxLength = 2000): string {
   const sanitized = text.replace(/\0/g, '').trim()
   return sanitized.slice(0, maxLength)
 }
+
+/**
+ * Safely parses a JSON response from a fetch request.
+ * Handles HTML error pages (504, 413, 502) returned by Vercel edge/gateway gracefully.
+ */
+export async function safeParseJsonResponse<T = any>(
+  res: Response
+): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
+  const status = res.status
+  try {
+    const contentType = res.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      const text = await res.text()
+      const isHtml = text.trim().startsWith('<') || text.includes('<html')
+      return {
+        ok: false,
+        status,
+        error: isHtml
+          ? `Server returned non-JSON response (${status}). Service may be temporarily unavailable or timed out.`
+          : text.slice(0, 300) || `Request failed with status ${status}.`,
+      }
+    }
+    const data = await res.json()
+    return { ok: res.ok, status, data, error: !res.ok ? data?.error || data?.message : undefined }
+  } catch (err: any) {
+    return {
+      ok: false,
+      status,
+      error: `Failed to parse response: ${err?.message || 'Invalid server response.'}`,
+    }
+  }
+}

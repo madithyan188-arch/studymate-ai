@@ -8,6 +8,9 @@ import {
 } from '@/lib/api-security'
 import type { Database } from '@/lib/supabase/database.types'
 
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   // 1. Content-Type Validation
   const ctCheck = validateContentType(req)
