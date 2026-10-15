@@ -48,18 +48,19 @@ export function generateStructuralQuestionsFromNotes(
     const cleanTitle = sec.title.replace(/^notes-\w+:\s*/i, '').trim()
     const content = (sec.content || '').trim()
 
-    // Extract primary sentence from section content
+    // Extract all factual sentences from section content
     if (content.length >= 15) {
-      const sentences = content
+      const rawSentences = content
         .split(/(?<=[.?!])\s+/)
         .map((s) => s.trim())
-        .filter((s) => s.length >= 15 && s.length <= 160)
+        .filter((s) => s.length >= 15)
 
-      if (sentences.length > 0) {
+      for (const sent of rawSentences) {
+        const statement = sent.length > 180 ? `${sent.slice(0, 177).trim()}...` : sent
         pool.push({
           concept: cleanTitle,
-          statement: sentences[0],
-          explanation: sec.examTip ? `${sentences[0]} (Exam Tip: ${sec.examTip})` : sentences[0],
+          statement,
+          explanation: sec.examTip ? `${statement} (Exam Tip: ${sec.examTip})` : statement,
         })
       }
     }
@@ -68,11 +69,12 @@ export function generateStructuralQuestionsFromNotes(
     if (Array.isArray(sec.bullets)) {
       for (const bullet of sec.bullets) {
         const cleanBullet = bullet.trim()
-        if (cleanBullet.length >= 15 && cleanBullet.length <= 160) {
+        if (cleanBullet.length >= 15) {
+          const statement = cleanBullet.length > 180 ? `${cleanBullet.slice(0, 177).trim()}...` : cleanBullet
           pool.push({
             concept: cleanTitle,
-            statement: cleanBullet,
-            explanation: `Key concept point for ${cleanTitle}: ${cleanBullet}`,
+            statement,
+            explanation: `Key concept point for ${cleanTitle}: ${statement}`,
           })
         }
       }
@@ -84,13 +86,15 @@ export function generateStructuralQuestionsFromNotes(
     const summarySentences = notesSummary
       .split(/(?<=[.?!])\s+/)
       .map((s) => s.trim())
-      .filter((s) => s.length >= 15 && s.length <= 160)
+      .filter((s) => s.length >= 15)
+
     for (const sent of summarySentences) {
-      if (!pool.some((p) => p.statement === sent)) {
+      const statement = sent.length > 180 ? `${sent.slice(0, 177).trim()}...` : sent
+      if (!pool.some((p) => p.statement === statement)) {
         pool.push({
           concept: cleanTopic,
-          statement: sent,
-          explanation: sent,
+          statement,
+          explanation: statement,
         })
       }
     }

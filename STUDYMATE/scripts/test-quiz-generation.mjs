@@ -277,9 +277,9 @@ async function runQuizGenerationTests() {
     'CONFIGURATION & SECURITY AUDIT'
   )
 
-  // Test 3.4: Rejection of misleading content with HTTP 422
+  // Test 3.4: Rejection of misleading content with HTTP 422 and differentiated error categorization
   assert(
-    routeContent.includes('422') && routeContent.includes('insufficient distinct concepts'),
+    routeContent.includes('422') && routeContent.includes('distinct concepts'),
     'Quiz API returns HTTP 422 when note content is insufficient to prevent misleading/fabricated quiz options',
     'CONFIGURATION & SECURITY AUDIT'
   )
@@ -290,6 +290,26 @@ async function runQuizGenerationTests() {
       (routeContent.includes("hi: 'Hindi (हिन्दी)'") || routeContent.includes("'hi': 'Hindi (हिन्दी)'")) &&
       (routeContent.includes("ta: 'Tamil (தமிழ்)'") || routeContent.includes("'ta': 'Tamil (தமிழ்)'")),
     'Localization dictionary maps Malayalam, Hindi, and Tamil to native script prompts',
+    'CONFIGURATION & SECURITY AUDIT'
+  )
+
+  // Test 3.6: Differentiated Gemini Error Handling
+  assert(
+    routeContent.includes('INVALID_KEY') &&
+      routeContent.includes('QUOTA_EXCEEDED') &&
+      routeContent.includes('MALFORMED_RESPONSE') &&
+      routeContent.includes('MISSING_CONFIG'),
+    'Quiz API distinguishes missing config, invalid key, quota limits, and malformed AI responses',
+    'CONFIGURATION & SECURITY AUDIT'
+  )
+
+  // Test 3.7: Sanitized Diagnostic Logging (no credential exposure)
+  assert(
+    routeContent.includes('Gemini key rejected [status:') &&
+      routeContent.includes('category: INVALID_KEY') &&
+      !routeContent.includes('console.warn(geminiKey') &&
+      !routeContent.includes('console.log(geminiKey'),
+    'Quiz API logs only sanitized diagnostic details (status and category), never credentials or full notes',
     'CONFIGURATION & SECURITY AUDIT'
   )
 

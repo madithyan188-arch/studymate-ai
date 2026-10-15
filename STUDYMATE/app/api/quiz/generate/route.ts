@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import fs from 'fs'
+import path from 'path'
 import {
   validateContentType,
   authenticateApiRequest,
@@ -24,6 +26,7 @@ interface QuizGenerateRequestBody {
   topic?: string
   notesContext?: string
   notesSections?: NoteSectionInput[]
+  materialContent?: string
   language?: string
   questionCount?: number | string
   difficulty?: string
@@ -34,6 +37,73 @@ const LANGUAGE_NAMES: Record<string, string> = {
   ml: 'Malayalam (മലയാളം)',
   hi: 'Hindi (हिन्दी)',
   ta: 'Tamil (தமிழ்)',
+}
+
+type AiErrorCategory =
+  | 'MISSING_CONFIG'
+  | 'INVALID_KEY'
+  | 'QUOTA_EXCEEDED'
+  | 'SERVICE_UNAVAILABLE'
+  | 'MALFORMED_RESPONSE'
+  | 'NETWORK_ERROR'
+
+interface AiErrorInfo {
+  category: AiErrorCategory
+  status?: number
+  message: string
+}
+
+function isPlaceholderKey(key?: string): boolean {
+  if (!key) return true
+  const trimmed = key.trim()
+  if (trimmed.length < 15) return true
+  const lower = trimmed.toLowerCase()
+  return (
+    lower.includes('your_') ||
+    lower.includes('your-') ||
+    lower === 'placeholder' ||
+    lower === 'test' ||
+    lower.includes('your_api_key') ||
+    lower.includes('your-api-key')
+  )
+}
+
+/**
+ * Safely resolves an API key from process.env with fallback to .env.local on disk
+ * without exposing or printing the secret value.
+ */
+function resolveServerApiKey(name: string): string | undefined {
+  const envVal = process.env[name]
+  if (envVal && !isPlaceholderKey(envVal)) {
+    return envVal
+  }
+
+  // Fallback: check .env.local files in project root or supabase directory
+  try {
+    const candidatePaths = [
+      path.join(process.cwd(), '.env.local'),
+      path.join(process.cwd(), 'supabase', '.env.local'),
+    ]
+    for (const filePath of candidatePaths) {
+      if (fs.existsSync(/*turbopackIgnore: true*/ filePath)) {
+        const fileContent = fs.readFileSync(/*turbopackIgnore: true*/ filePath, 'utf8')
+        const lines = fileContent.split('\n')
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith(`${name}=`)) {
+            const rawVal = trimmed.slice(name.length + 1).trim().replace(/^['"]|['"]$/g, '')
+            if (rawVal && !isPlaceholderKey(rawVal)) {
+              return rawVal
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-fatal filesystem access error ignored
+  }
+
+  return undefined
 }
 
 export async function POST(req: NextRequest) {
@@ -69,6 +139,7 @@ export async function POST(req: NextRequest) {
       topic = 'General Study',
       notesContext = '',
       notesSections = [],
+      materialContent = '',
       language = 'en',
       questionCount = 5,
       difficulty = 'Simple',
@@ -170,6 +241,10 @@ export async function POST(req: NextRequest) {
       compiledContext += `\n\nAdditional Notes Summary:\n${activeNotesContext.trim()}`
     }
 
+    if (materialContent && materialContent.trim().length > 0) {
+      compiledContext += `\n\nDocument Outline:\n${materialContent.trim()}`
+    }
+
     const sanitizedContext = sanitizePromptText(compiledContext, 6000)
 
     // Guard: ensure student provided at least some notes or topic
@@ -182,16 +257,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check for AI provider keys
-    const isPlaceholder = (key?: string) =>
-      !key ||
-      key.trim() === '' ||
-      key.toUpperCase().includes('YOUR_') ||
-      key === 'placeholder' ||
-      key === 'test'
+    // Resolve server-side AI provider keys
+    const geminiKey = resolveServerApiKey('GEMINI_API_KEY')
+    const openAiKey = resolveServerApiKey('OPENAI_API_KEY')
 
-    const geminiKey = isPlaceholder(process.env.GEMINI_API_KEY) ? undefined : process.env.GEMINI_API_KEY
-    const openAiKey = isPlaceholder(process.env.OPENAI_API_KEY) ? undefined : process.env.OPENAI_API_KEY
+    let geminiError: AiErrorInfo | null = null
 
     // =========================================================================
     // OPTION 1: Real AI Generation with Google Gemini
@@ -248,48 +318,98 @@ CRITICAL RULES:
           const data = await response.json()
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
           if (rawText) {
-            const parsed = JSON.parse(rawText)
-            const list = Array.isArray(parsed) ? parsed : parsed.questions || parsed.items || []
-            if (Array.isArray(list) && list.length > 0) {
-              const validQuestions: QuizQuestionItem[] = list
-                .filter(
-                  (q: any) =>
-                    q &&
-                    typeof q.question === 'string' &&
-                    Array.isArray(q.options) &&
-                    q.options.length === 4 &&
-                    typeof q.answer === 'number' &&
-                    q.answer >= 0 &&
-                    q.answer < 4
-                )
-                .map((q: any) => ({
-                  question: String(q.question).trim(),
-                  options: q.options.map((o: any) => String(o).trim()),
-                  answer: Math.floor(q.answer),
-                  explanation: String(q.explanation || 'Verified correct answer according to course notes.').trim(),
-                  topic: String(q.topic || sanitizedTopic).trim(),
-                }))
+            try {
+              const parsed = JSON.parse(rawText)
+              const list = Array.isArray(parsed) ? parsed : parsed.questions || parsed.items || []
+              if (Array.isArray(list) && list.length > 0) {
+                const validQuestions: QuizQuestionItem[] = list
+                  .filter(
+                    (q: any) =>
+                      q &&
+                      typeof q.question === 'string' &&
+                      Array.isArray(q.options) &&
+                      q.options.length === 4 &&
+                      typeof q.answer === 'number' &&
+                      q.answer >= 0 &&
+                      q.answer < 4
+                  )
+                  .map((q: any) => ({
+                    question: String(q.question).trim(),
+                    options: q.options.map((o: any) => String(o).trim()),
+                    answer: Math.floor(q.answer),
+                    explanation: String(q.explanation || 'Verified correct answer according to course notes.').trim(),
+                    topic: String(q.topic || sanitizedTopic).trim(),
+                  }))
 
-              if (validQuestions.length > 0) {
-                return NextResponse.json({
-                  questions: validQuestions.slice(0, countNum),
-                  provider: 'gemini',
-                  aiGenerated: true,
-                  topic: sanitizedTopic,
-                  language: targetLanguage,
-                  count: validQuestions.length,
-                })
+                if (validQuestions.length > 0) {
+                  return NextResponse.json({
+                    questions: validQuestions.slice(0, countNum),
+                    provider: 'gemini',
+                    aiGenerated: true,
+                    topic: sanitizedTopic,
+                    language: targetLanguage,
+                    count: validQuestions.length,
+                  })
+                }
               }
+            } catch {
+              geminiError = {
+                category: 'MALFORMED_RESPONSE',
+                status: 200,
+                message: 'Gemini responded but output could not be parsed as valid JSON questions.',
+              }
+              console.warn('[StudyMate Quiz API] Gemini response parsing failed [status: 200, category: MALFORMED_RESPONSE]')
             }
+          } else {
+            geminiError = {
+              category: 'MALFORMED_RESPONSE',
+              status: 200,
+              message: 'Gemini returned an empty candidate response.',
+            }
+            console.warn('[StudyMate Quiz API] Gemini empty candidate [status: 200, category: MALFORMED_RESPONSE]')
+          }
+        } else {
+          // Categorize HTTP failure status
+          const status = response.status
+          if (status === 400 || status === 401 || status === 403) {
+            geminiError = {
+              category: 'INVALID_KEY',
+              status,
+              message: `Gemini API key is invalid or lacks required permissions (HTTP ${status}).`,
+            }
+            console.warn(`[StudyMate Quiz API] Gemini key rejected [status: ${status}, category: INVALID_KEY]`)
+          } else if (status === 429) {
+            geminiError = {
+              category: 'QUOTA_EXCEEDED',
+              status: 429,
+              message: 'Gemini API quota or rate limit exceeded (HTTP 429).',
+            }
+            console.warn('[StudyMate Quiz API] Gemini quota exceeded [status: 429, category: QUOTA_EXCEEDED]')
+          } else {
+            geminiError = {
+              category: 'SERVICE_UNAVAILABLE',
+              status,
+              message: `Gemini API service error (HTTP ${status}).`,
+            }
+            console.warn(`[StudyMate Quiz API] Gemini service error [status: ${status}, category: SERVICE_UNAVAILABLE]`)
           }
         }
-      } catch (geminiErr) {
-        console.warn('[StudyMate Quiz API] Gemini generation failed, falling back:', geminiErr)
+      } catch (err: any) {
+        geminiError = {
+          category: 'NETWORK_ERROR',
+          message: 'Network request to Google Gemini API timed out or failed.',
+        }
+        console.warn('[StudyMate Quiz API] Gemini network failure [category: NETWORK_ERROR]')
+      }
+    } else {
+      geminiError = {
+        category: 'MISSING_CONFIG',
+        message: 'GEMINI_API_KEY is not configured or is set to placeholder in .env.local.',
       }
     }
 
     // =========================================================================
-    // OPTION 2: Real AI Generation with OpenAI
+    // OPTION 2: Real AI Generation with OpenAI (Backup)
     // =========================================================================
     if (openAiKey) {
       try {
@@ -396,22 +516,40 @@ Return strictly a JSON object with a "questions" array adhering to:
         topic: sanitizedTopic,
         language: targetLanguage,
         count: structuralQuestions.length,
-        diagnostics:
-          'Questions generated directly from study note sections and concepts. Configure GEMINI_API_KEY in server settings for AI synthesis.',
+        diagnostics: geminiError?.message
+          ? `Grounded synthesis used: ${geminiError.message}`
+          : 'Questions generated directly from study note sections and concepts.',
       })
     }
 
-    // If no questions could be extracted and no AI key is configured
+    // =========================================================================
+    // Clear, Differentiated Error Reporting
+    // =========================================================================
+    let userFacingError = ''
+    if (geminiError?.category === 'INVALID_KEY') {
+      userFacingError = `Gemini AI key error: The configured GEMINI_API_KEY was rejected by Google (HTTP ${geminiError.status || 400}). Please verify your API key in .env.local.`
+    } else if (geminiError?.category === 'QUOTA_EXCEEDED') {
+      userFacingError = `Gemini AI quota exceeded: Google AI Studio rate limit or quota reached (HTTP 429). Please wait a moment or check your quota.`
+    } else if (geminiError?.category === 'MALFORMED_RESPONSE') {
+      userFacingError = `Gemini AI responded with an unparseable format. Please try again with a different topic or question count.`
+    } else if (geminiError?.category === 'SERVICE_UNAVAILABLE') {
+      userFacingError = `Gemini AI service is temporarily unavailable (HTTP ${geminiError.status || 503}). Please try again shortly.`
+    } else if (geminiError?.category === 'NETWORK_ERROR') {
+      userFacingError = `Network connection to Gemini AI timed out. Please check your internet connection and try again.`
+    } else {
+      userFacingError = `AI provider not configured: GEMINI_API_KEY is missing or set to placeholder in .env.local. Offline question synthesis requires study notes with at least 4 distinct concepts.`
+    }
+
     return NextResponse.json(
       {
         configured: Boolean(geminiKey || openAiKey),
-        error:
-          'Could not generate quiz questions from the provided content without AI. The material contains insufficient distinct concepts to form non-misleading multiple choice questions. Please provide notes with at least 4 distinct concepts or configure GEMINI_API_KEY in server settings.',
+        errorCategory: geminiError?.category || 'MISSING_CONFIG',
+        error: userFacingError,
       },
       { status: 422 }
     )
   } catch (error: any) {
-    console.error('[StudyMate Quiz API] Unexpected error in quiz route:', error)
+    console.error('[StudyMate Quiz API] Unexpected error in quiz route:', error?.message)
     return NextResponse.json(
       { error: 'An unexpected server error occurred while generating the quiz.' },
       { status: 500 }

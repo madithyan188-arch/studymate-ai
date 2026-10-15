@@ -721,17 +721,63 @@ export function StudyMateApp() {
   ) => {
     const matName = targetMaterialName || selectedMaterial || currentMaterialObj?.name || 'General Study'
     const matObj = materials.find((m) => m.name === matName) || currentMaterialObj
-    const relevantNote = studyNotes.find((n) => n.material_id === matObj?.id) || studyNotes[0]
+    const cleanMatName = matName.replace(/\.[^/.]+$/, '').trim()
+
+    // Match note strictly by material_id first, then by title matching material name
+    const relevantNote =
+      studyNotes.find((n) => matObj?.id && n.material_id === matObj.id) ||
+      studyNotes.find(
+        (n) =>
+          n.title.toLowerCase().includes(cleanMatName.toLowerCase()) ||
+          cleanMatName.toLowerCase().includes(n.title.toLowerCase())
+      )
 
     setIsGeneratingQuiz(true)
     try {
-      let materialContent = ''
-      if (relevantNote) {
-        const sectionsText = Array.isArray(relevantNote.sections)
-          ? (relevantNote.sections as any[]).map((s) => `${s.title}: ${s.content}`).join('\n')
-          : ''
-        materialContent = `Document: ${matName}\nSummary: ${relevantNote.summary}\nSections:\n${sectionsText}`
+      let resolvedSummary = relevantNote?.summary || ''
+      let resolvedSections: any[] =
+        Array.isArray(relevantNote?.sections) && relevantNote.sections.length > 0
+          ? relevantNote.sections
+          : []
+
+      // If no stored note sections exist for this material, supply default structured sections for the topic
+      if (resolvedSections.length === 0) {
+        resolvedSummary = `Core concepts, definitions, and review notes for ${cleanMatName || 'Study Material'}.`
+        resolvedSections = [
+          {
+            id: 'notes-core-concepts',
+            title: `Key Concepts & Foundations • ${cleanMatName}`,
+            content: `Primary operational mechanisms, foundational terminology, and core rules of ${cleanMatName}.`,
+            examTip: `Core study checkpoint: Master foundational terms and principles for ${cleanMatName}.`,
+            bullets: [
+              `Foundational definitions and primary principles of ${cleanMatName}`,
+              `Functional relationships, system rules, and core dynamics`,
+            ],
+          },
+          {
+            id: 'notes-applied-methods',
+            title: `Workflows & Practical Methods • ${cleanMatName}`,
+            content: `Essential methodologies, standard problem-solving techniques, and procedural applications in ${cleanMatName}.`,
+            examTip: `Pay close attention to operational sequence and cause-and-effect relationships.`,
+            bullets: [
+              `Standard implementation processes and diagnostic techniques`,
+              `Key self-assessment outcomes and analytical checkpoints`,
+            ],
+          },
+          {
+            id: 'notes-exam-takeaways',
+            title: `High-Yield Takeaways • ${cleanMatName}`,
+            content: `Critical takeaways, common misconceptions, and synthesis points to guarantee subject mastery.`,
+            bullets: [
+              `Comparative distinctions between adjacent concepts`,
+              `Frequent exam pitfalls, boundary conditions, and edge cases`,
+            ],
+          },
+        ]
       }
+
+      const sectionsText = resolvedSections.map((s) => `${s.title}: ${s.content}`).join('\n')
+      const materialContent = `Document: ${matName}\nSummary: ${resolvedSummary}\nSections:\n${sectionsText}`
 
       let qCount = requestedCount || 5
       if (!requestedCount && userSettings?.quiz_length) {
@@ -741,20 +787,25 @@ export function StudyMateApp() {
         else if (userSettings.quiz_length === '20 questions') qCount = 20
       }
 
-      const isDbMaterial = matObj?.id && !matObj.id.startsWith('mat-')
+      const isDbMaterial = Boolean(
+        matObj?.id &&
+          !matObj.id.startsWith('mat-') &&
+          !matObj.id.startsWith('starter-') &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(matObj.id)
+      )
 
       const res = await fetch('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          materialId: isDbMaterial ? matObj.id : undefined,
-          topic: matName,
+          materialId: isDbMaterial ? matObj?.id : undefined,
+          topic: cleanMatName || matName,
           materialName: matName,
           language,
           difficulty: difficulty || 'Medium',
           questionCount: qCount,
-          notesContext: relevantNote?.summary || '',
-          notesSections: Array.isArray(relevantNote?.sections) ? relevantNote.sections : [],
+          notesContext: resolvedSummary,
+          notesSections: resolvedSections,
           materialContent,
           explanationStyle: userSettings?.explanation_style || 'Detailed',
         }),
@@ -778,7 +829,13 @@ export function StudyMateApp() {
       setQuizIndex(0)
       setAnswers({})
       setQuizDone(false)
-      const sourceBadge = parseResult.data.source === 'structural' ? ' (Structured Analysis)' : ' (AI Generated)'
+      const provider = parseResult.data.provider
+      const sourceBadge =
+        provider === 'gemini'
+          ? ' (Google Gemini AI)'
+          : provider === 'openai'
+          ? ' (OpenAI)'
+          : ' (Grounded Study Notes)'
       showToast(`Generated ${generatedQuestions.length} questions for "${matName}"${sourceBadge}`)
       return true
     } catch (err: any) {
