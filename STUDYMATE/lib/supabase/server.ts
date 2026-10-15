@@ -5,14 +5,22 @@ import type { Database } from './database.types'
 export async function createClient() {
   const cookieStore = await cookies()
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey =
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const supabaseKey = (
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )?.trim()
 
-  if (!supabaseUrl || !supabaseKey) {
+  const isPlaceholder =
+    supabaseKey &&
+    (supabaseKey === 'PASTE_THE_COMPLETE_PUBLISHABLE_KEY_HERE' ||
+      supabaseKey.toLowerCase().includes('paste') ||
+      supabaseKey.toLowerCase().includes('placeholder') ||
+      supabaseKey.toLowerCase().includes('your_'))
+
+  if (!supabaseUrl || !supabaseKey || isPlaceholder) {
     throw new Error(
-      'Supabase server client initialization failed: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable.'
+      'Supabase server client initialization failed: Missing or placeholder NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable.'
     )
   }
 

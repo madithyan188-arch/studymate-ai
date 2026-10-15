@@ -87,8 +87,8 @@ async function runSecurityAudit() {
   console.log('\n2. Auditing Public vs Server Environment Variables...')
   if (fs.existsSync('.env.local')) {
     const envContent = fs.readFileSync('.env.local', 'utf8')
-    const hasServiceKey = envContent.includes('SERVICE_ROLE')
-    assert(!hasServiceKey, '.env.local does not contain or expose a service-role key')
+    const hasServiceKey = envContent.includes('SERVICE_ROLE') || envContent.includes('SECRET_KEY')
+    assert(!hasServiceKey, '.env.local does not contain or expose a service-role/secret key')
     const hasAnonKey = envContent.includes('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') || envContent.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY')
     assert(hasAnonKey, '.env.local correctly specifies public anon/publishable key')
   }

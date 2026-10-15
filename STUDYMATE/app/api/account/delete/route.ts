@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createAdminClient, isSupabaseAdminConfigured } from '@/lib/supabase/admin'
 import {
   validateContentType,
   authenticateApiRequest,
   checkRateLimit,
 } from '@/lib/api-security'
-import type { Database } from '@/lib/supabase/database.types'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -44,74 +43,27 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    // Helper: Purge user's study records under user's authenticated session
-    const userClient = await createServerClient()
-    const purgeErrors: string[] = []
-
-    // Child-to-parent deletion order to respect foreign key integrity
-    const { error: msgErr } = await userClient.from('tutor_messages').delete().eq('user_id', userId)
-    if (msgErr) purgeErrors.push(`Tutor messages: ${msgErr.message}`)
-
-    const { error: convErr } = await userClient.from('tutor_conversations').delete().eq('user_id', userId)
-    if (convErr) purgeErrors.push(`Tutor conversations: ${convErr.message}`)
-
-    const { error: notesErr } = await userClient.from('study_notes').delete().eq('user_id', userId)
-    if (notesErr) purgeErrors.push(`Study notes: ${notesErr.message}`)
-
-    const { error: quizErr } = await userClient.from('quiz_attempts').delete().eq('user_id', userId)
-    if (quizErr) purgeErrors.push(`Quiz attempts: ${quizErr.message}`)
-
-    const { error: matErr } = await userClient.from('materials').delete().eq('user_id', userId)
-    if (matErr) purgeErrors.push(`Study materials: ${matErr.message}`)
-
-    const { error: scanErr } = await userClient.from('scan_queries').delete().eq('user_id', userId)
-    if (scanErr) purgeErrors.push(`Scan history: ${scanErr.message}`)
-
-    if (purgeErrors.length > 0) {
+    // 1. Pre-flight verification: Ensure server administrative client is configured before deleting anything
+    if (!isSupabaseAdminConfigured()) {
       return NextResponse.json(
         {
-          error: `Failed to purge dependent records: ${purgeErrors.join('; ')}`,
+          error:
+            'Account deletion cannot proceed: Server administrative credentials (SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY) are not configured. Your data and account remain safe and intact.',
+          adminKeyMissing: true,
           success: false,
           authDeleted: false,
+          dataPurged: false,
         },
-        { status: 500 }
+        { status: 503 }
       )
     }
 
-    // 4. Supabase Admin API Auth User Deletion
-    const isPlaceholder = (k?: string) =>
-      !k ||
-      k.trim() === '' ||
-      k.toUpperCase().includes('YOUR_') ||
-      k === 'placeholder' ||
-      k === 'test'
+    const adminClient = createAdminClient()
+    const userClient = await createServerClient()
 
-    if (!serviceRoleKey || isPlaceholder(serviceRoleKey) || !supabaseUrl) {
-      // Data is purged, but server-side auth user deletion requires administrative key
-      return NextResponse.json(
-        {
-          success: true,
-          authDeleted: false,
-          dataPurged: true,
-          message:
-            'All study materials, notes, quiz attempts, and chat records were permanently purged. Permanent deletion of auth credentials requires SUPABASE_SERVICE_ROLE_KEY to be configured on the server.',
-          adminKeyMissing: true,
-        },
-        { status: 200 }
-      )
-    }
-
-    // Initialize Supabase Admin client with service-role key (server-side only, never leaked)
-    const adminClient = createSupabaseClient<Database>(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
+    // 2. Primary atomic deletion: Delete user from auth.users
+    // PostgreSQL relational schema foreign keys automatically and atomically CASCADE to:
+    // profiles, user_settings, materials, study_notes, quiz_attempts, tutor_conversations, tutor_messages, scan_queries
     const { error: adminDeleteErr } = await adminClient.auth.admin.deleteUser(userId)
 
     if (adminDeleteErr) {
@@ -120,15 +72,35 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           authDeleted: false,
-          dataPurged: true,
-          error: `Data records purged, but auth user deletion failed: ${adminDeleteErr.message}`,
+          dataPurged: false,
+          error: `Account deletion failed: ${adminDeleteErr.message}. Your account and study data remain intact.`,
         },
         { status: 500 }
       )
     }
 
-    // Also terminate user session on the server
-    await userClient.auth.signOut()
+    // 3. Defense-in-depth: Ensure any unconstrained or residual records are swept
+    try {
+      await Promise.allSettled([
+        adminClient.from('tutor_messages').delete().eq('user_id', userId),
+        adminClient.from('tutor_conversations').delete().eq('user_id', userId),
+        adminClient.from('study_notes').delete().eq('user_id', userId),
+        adminClient.from('quiz_attempts').delete().eq('user_id', userId),
+        adminClient.from('materials').delete().eq('user_id', userId),
+        adminClient.from('scan_queries').delete().eq('user_id', userId),
+        adminClient.from('user_settings').delete().eq('user_id', userId),
+        adminClient.from('profiles').delete().eq('id', userId),
+      ])
+    } catch {
+      // Non-critical if PostgreSQL cascade has already removed all rows
+    }
+
+    // 4. Terminate user session cookies on the server
+    try {
+      await userClient.auth.signOut()
+    } catch {
+      // User is already removed from auth.users
+    }
 
     return NextResponse.json({
       success: true,

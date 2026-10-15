@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage, Language, SUPPORTED_LANGUAGES } from '@/lib/i18n'
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured, getSupabaseConfigStatus } from '@/lib/supabase/client'
 
 export type AuthMode = 'login' | 'signup' | 'forgot' | 'reset'
 
@@ -116,9 +116,11 @@ export function AuthScreen({
     setGoogleError(null)
     setGoogleNotice(null)
 
-    if (!isSupabaseConfigured()) {
+    const configStatus = getSupabaseConfigStatus()
+    if (!configStatus.isConfigured) {
       setGoogleNotice(
-        'Supabase is partially configured with Project URL. Please ensure NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env.local has your complete Supabase anon/publishable key.'
+        configStatus.message ||
+          'Supabase is partially configured with Project URL. Please ensure NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env.local has your complete Supabase anon/publishable key.'
       )
       return
     }
@@ -356,10 +358,13 @@ export function AuthScreen({
       setErrors({})
       setIsSubmitting(true)
       try {
-        if (!isSupabaseConfigured()) {
+        const configStatus = getSupabaseConfigStatus()
+        if (!configStatus.isConfigured) {
           setSubmittedMessage({
             title: 'Supabase Not Configured',
-            description: 'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+            description:
+              configStatus.message ||
+              'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
           })
           return
         }
@@ -404,10 +409,13 @@ export function AuthScreen({
       setErrors({})
       setIsSubmitting(true)
       try {
-        if (!isSupabaseConfigured()) {
+        const configStatus = getSupabaseConfigStatus()
+        if (!configStatus.isConfigured) {
           setSubmittedMessage({
             title: 'Supabase Not Configured',
-            description: 'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+            description:
+              configStatus.message ||
+              'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
           })
           return
         }
@@ -453,10 +461,13 @@ export function AuthScreen({
       setErrors({})
       setIsSubmitting(true)
       try {
-        if (!isSupabaseConfigured()) {
+        const configStatus = getSupabaseConfigStatus()
+        if (!configStatus.isConfigured) {
           setSubmittedMessage({
             title: 'Supabase Not Configured',
-            description: 'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+            description:
+              configStatus.message ||
+              'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
           })
           return
         }
@@ -494,10 +505,13 @@ export function AuthScreen({
       setErrors({})
       setIsSubmitting(true)
       try {
-        if (!isSupabaseConfigured()) {
+        const configStatus = getSupabaseConfigStatus()
+        if (!configStatus.isConfigured) {
           setSubmittedMessage({
             title: 'Supabase Not Configured',
-            description: 'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+            description:
+              configStatus.message ||
+              'Authentication requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
           })
           return
         }
